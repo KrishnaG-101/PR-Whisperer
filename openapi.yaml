@@ -1,0 +1,834 @@
+openapi: 3.1.0
+info:
+  title: PR-Whisperer API
+  description: >
+    Canonical Single Source of Truth for PR-Whisperer — Voice-First AI Code Review,
+    OpenAPI Drift Detection & Autonomous Incident Studio powered by Wispr Flow.
+  version: 1.0.0
+  contact:
+    name: PR-Whisperer Core Engineering Team
+    url: https://github.com/placeholder/pr-whisperer
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Local Development & Docker Compose Gateway
+
+paths:
+  /api/v1/health:
+    get:
+      summary: System Health & Readiness Check
+      description: >
+        Returns the operational status of the service, database connectivity,
+        active telemetry tracing status, and count of active user-impact incidents.
+      operationId: getSystemHealth
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy and operational.
+          headers:
+            X-Trace-ID:
+              $ref: '#/components/headers/X-Trace-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                healthy:
+                  summary: Healthy System Status
+                  value:
+                    status: healthy
+                    version: 1.0.0
+                    db_connected: true
+                    telemetry_active: true
+                    active_incidents_count: 0
+
+  /api/v1/prs:
+    get:
+      summary: List Pull Requests
+      description: >
+        Returns all pull request summaries in the database, including the 3 pre-seeded
+        realistic PR scenarios (PR-101, PR-102, PR-103) and user-imported custom PRs.
+      operationId: listPullRequests
+      tags:
+        - Pull Requests
+      responses:
+        '200':
+          description: List of pull request records.
+          headers:
+            X-Trace-ID:
+              $ref: '#/components/headers/X-Trace-ID'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PullRequestSummary'
+    post:
+      summary: Import Custom Pull Request
+      description: >
+        Ingests and persists a new pull request record from a title, repository name,
+        author, branch metadata, and raw unified git diff text.
+      operationId: createPullRequest
+      tags:
+        - Pull Requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PullRequestCreate'
+            examples:
+              custom_pr:
+                summary: New Feature PR
+                value:
+                  title: "fix(auth): sanitize user profile tokens"
+                  repo_name: "acme-corp/core-service"
+                  author: "alex-dev"
+                  branch_source: "fix/token-sanitization"
+                  branch_target: "main"
+                  diff_text: "diff --git a/auth/token.py b/auth/token.py\nindex 123..456 100644\n--- a/auth/token.py\n+++ b/auth/token.py\n@@ -10,3 +10,4 @@\n+def sanitize(t): return t.strip()"
+      responses:
+        '201':
+          description: Pull request successfully created and indexed.
+          headers:
+            X-Trace-ID:
+              $ref: '#/components/headers/X-Trace-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequestDetail'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/prs/{pr_id}:
+    get:
+      summary: Get Pull Request Details
+      description: >
+        Retrieves full details for a specific pull request by ID, including its complete
+        unified diff text, changed files summary, and all prior voice review sessions.
+      operationId: getPullRequestDetail
+      tags:
+        - Pull Requests
+      parameters:
+        - name: pr_id
+          in: path
+          required: true
+          description: The unique identifier of the pull request (e.g. 'PR-101' or a UUID).
+          schema:
+            type: string
+            example: "PR-101"
+      responses:
+        '200':
+          description: Pull request details retrieved successfully.
+          headers:
+            X-Trace-ID:
+              $ref: '#/components/headers/X-Trace-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequestDetail'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/prs/{pr_id}/voice-analyze:
+    post:
+      summary: Ingest Wispr Flow Voice Review & Scan PR
+      description: >
+        Processes a continuous, stream-of-consciousness voice review transcript dictated
+        via Wispr Flow. Scans the diff for deterministic security flaws and OpenAPI contract drift,
+        synthesizes line-pinned GitHub review cards with replacement patches, computes the
+        readiness score (0-100), and prepares the 1-click Coding Agent Fix Prompt.
+      operationId: analyzeVoiceReview
+      tags:
+        - Voice Review
+      parameters:
+        - name: pr_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "PR-101"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoiceAnalyzeRequest'
+            examples:
+              wispr_flow_critique:
+                summary: Review Dictation via Wispr Flow
+                value:
+                  spoken_transcript: >
+                    Hey, in stripe_client.py around line 42, you have hardcoded a live secret key
+                    sk_live_abc123. Move that to an environment variable immediately. In line 88, you
+                    are concatenating raw query strings into SQL which opens up SQL injection. Also in
+                    checkout.py line 15, this endpoint doesn't check JWT permissions.
+                  reviewer_name: "Staff Engineer Sarah"
+                  simulate_failure: false
+      responses:
+        '200':
+          description: Voice review successfully processed and persisted.
+          headers:
+            X-Trace-ID:
+              $ref: '#/components/headers/X-Trace-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceReviewSession'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/queryspeak:
+    post:
+      summary: Natural Language Voice Audit Search
+      description: >
+        Accepts natural language spoken queries (e.g. 'Show critical security issues in payment PRs')
+        and extracts filter intents (severity, category, file pattern, repo keyword) to search
+        across all stored reviews, returning structured comment items and executive insights.
+      operationId: querySpeakSearch
+      tags:
+        - Voice Audit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuerySpeakRequest'
+            examples:
+              audit_query:
+                summary: Spoken Audit Query
+                value:
+                  voice_query: "Show all critical security issues in payment PRs"
+      responses:
+        '200':
+          description: Search results and synthesized insights.
+          headers:
+            X-Trace-ID:
+              $ref: '#/components/headers/X-Trace-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuerySpeakResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/telemetry/summary:
+    get:
+      summary: Retrieve Live Telemetry & Incident Summary
+      description: >
+        Returns recent OpenTelemetry trace records (with correlated trace_id and sanitized logs),
+        request/error metrics, active user-impact alert state, and on-call agent remediation logs
+        for the in-app Observability Drawer.
+      operationId: getTelemetrySummary
+      tags:
+        - Observability
+      responses:
+        '200':
+          description: Live telemetry and system health summary.
+          headers:
+            X-Trace-ID:
+              $ref: '#/components/headers/X-Trace-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetrySummaryResponse'
+
+  /api/v1/incidents/simulate-and-respond:
+    post:
+      summary: Trigger Incident Drill & Autonomous On-Call Remediation
+      description: >
+        Simulates a production user-impact incident (or processes an active alert), wakes the
+        autonomous On-Call Responder Agent to triage the read-only evidence packet by trace_id,
+        generates a bounded remediation git diff, verifies it, and clears the incident.
+      operationId: simulateAndRespondIncident
+      tags:
+        - Observability
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentSimulationRequest'
+            examples:
+              drill_trigger:
+                summary: Rate Limit / Parsing Drill
+                value:
+                  alert_type: "VOICE_ANALYZE_FAILURE"
+                  pr_id: "PR-101"
+                  simulated_error: "RateLimitExceeded: Gemini API quota exceeded; falling back to deterministic scanner."
+      responses:
+        '200':
+          description: Incident successfully simulated, diagnosed, and resolved.
+          headers:
+            X-Trace-ID:
+              $ref: '#/components/headers/X-Trace-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentSimulationResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  headers:
+    X-Trace-ID:
+      description: Distributed OpenTelemetry trace identifier correlated across logs and spans.
+      schema:
+        type: string
+        example: "4bf92f3577b34da6a3ce929d0e0e4736"
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+        - db_connected
+        - telemetry_active
+        - active_incidents_count
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        version:
+          type: string
+          example: "1.0.0"
+        db_connected:
+          type: boolean
+          example: true
+        telemetry_active:
+          type: boolean
+          example: true
+        active_incidents_count:
+          type: integer
+          example: 0
+
+    PullRequestSummary:
+      type: object
+      required:
+        - id
+        - repo_name
+        - pr_number
+        - title
+        - author
+        - branch_source
+        - branch_target
+        - files_changed_count
+        - created_at
+      properties:
+        id:
+          type: string
+          example: "PR-101"
+        repo_name:
+          type: string
+          example: "acme-corp/payment-service"
+        pr_number:
+          type: string
+          example: "101"
+        title:
+          type: string
+          example: "feat(billing): integrate stripe checkout session"
+        author:
+          type: string
+          example: "autonomous-ai-bot"
+        branch_source:
+          type: string
+          example: "feat/stripe-checkout"
+        branch_target:
+          type: string
+          example: "main"
+        files_changed_count:
+          type: integer
+          example: 3
+        latest_readiness_score:
+          type: integer
+          nullable: true
+          example: 25
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-10-23T10:00:00Z"
+
+    PullRequestCreate:
+      type: object
+      required:
+        - title
+        - repo_name
+        - author
+        - branch_source
+        - diff_text
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+          example: "refactor(auth): sanitize user profile tokens"
+        repo_name:
+          type: string
+          example: "acme-corp/core-service"
+        author:
+          type: string
+          example: "alex-dev"
+        branch_source:
+          type: string
+          example: "fix/token-sanitization"
+        branch_target:
+          type: string
+          default: "main"
+          example: "main"
+        diff_text:
+          type: string
+          description: Unified git diff format.
+          example: "diff --git a/auth/token.py b/auth/token.py\n..."
+
+    PullRequestDetail:
+      allOf:
+        - $ref: '#/components/schemas/PullRequestSummary'
+        - type: object
+          required:
+            - diff_text
+            - changed_files
+            - review_sessions
+          properties:
+            diff_text:
+              type: string
+              description: Raw unified git diff.
+            changed_files:
+              type: array
+              items:
+                type: string
+              example: ["services/stripe_client.py", "api/checkout.py"]
+            review_sessions:
+              type: array
+              items:
+                $ref: '#/components/schemas/VoiceReviewSession'
+
+    VoiceAnalyzeRequest:
+      type: object
+      required:
+        - spoken_transcript
+      properties:
+        spoken_transcript:
+          type: string
+          description: Raw voice dictation text from Wispr Flow.
+          example: "In stripe_client.py line 42, secret key sk_live_... is hardcoded. Move to env vars."
+        reviewer_name:
+          type: string
+          default: "Wispr Reviewer"
+          example: "Staff Engineer Sarah"
+        simulate_failure:
+          type: boolean
+          default: false
+          description: If true, simulates a user-impact failure for testing the incident drill.
+
+    VoiceReviewSession:
+      type: object
+      required:
+        - id
+        - pr_id
+        - trace_id
+        - spoken_transcript
+        - readiness_score
+        - summary_markdown
+        - agent_fix_prompt
+        - comments
+        - guardrail_alerts
+        - created_at
+      properties:
+        id:
+          type: string
+          example: "VRS-8f92a10b"
+        pr_id:
+          type: string
+          example: "PR-101"
+        trace_id:
+          type: string
+          example: "4bf92f3577b34da6a3ce929d0e0e4736"
+        reviewer_name:
+          type: string
+          example: "Staff Engineer Sarah"
+        spoken_transcript:
+          type: string
+        readiness_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: 0-100 score where 100 is production-ready.
+          example: 25
+        summary_markdown:
+          type: string
+          description: Synthesized high-level review summary in markdown.
+        agent_fix_prompt:
+          type: string
+          description: Pre-formatted 1-click prompt for Claude Code / Cursor / MCP agents.
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewCommentItem'
+        guardrail_alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardrailAlert'
+        created_at:
+          type: string
+          format: date-time
+
+    ReviewCommentItem:
+      type: object
+      required:
+        - id
+        - file_path
+        - line_start
+        - line_end
+        - category
+        - severity
+        - spoken_excerpt
+        - polished_comment
+        - suggested_patch
+        - created_at
+      properties:
+        id:
+          type: string
+          example: "RCI-001"
+        file_path:
+          type: string
+          example: "services/stripe_client.py"
+        line_start:
+          type: integer
+          example: 42
+        line_end:
+          type: integer
+          example: 45
+        category:
+          type: string
+          enum: [Security, Contract Drift, Performance, Bug, Test Gap]
+          example: "Security"
+        severity:
+          type: string
+          enum: [Critical, Warning, Suggestion]
+          example: "Critical"
+        spoken_excerpt:
+          type: string
+          example: "hardcoded live secret key sk_live_... move to env vars"
+        polished_comment:
+          type: string
+          example: "CRITICAL: Live Stripe secret key detected. Move credentials to os.environ.get('STRIPE_SECRET_KEY')."
+        suggested_patch:
+          type: string
+          description: Unified diff chunk ready for 1-click application.
+          example: "-    stripe.api_key = 'sk_live_abc123'\n+    stripe.api_key = os.environ['STRIPE_SECRET_KEY']"
+        created_at:
+          type: string
+          format: date-time
+
+    GuardrailAlert:
+      type: object
+      required:
+        - id
+        - rule_id
+        - title
+        - severity
+        - file_path
+        - line_number
+        - description
+        - created_at
+      properties:
+        id:
+          type: string
+          example: "GRD-001"
+        rule_id:
+          type: string
+          example: "SEC-001"
+        title:
+          type: string
+          example: "Hardcoded API Credential"
+        severity:
+          type: string
+          enum: [Critical, Warning, Suggestion]
+          example: "Critical"
+        file_path:
+          type: string
+          example: "services/stripe_client.py"
+        line_number:
+          type: integer
+          example: 42
+        description:
+          type: string
+          example: "Detected high-entropy Stripe live API key matching regex pattern sk_live_[0-9a-zA-Z]{24}."
+        created_at:
+          type: string
+          format: date-time
+
+    QuerySpeakRequest:
+      type: object
+      required:
+        - voice_query
+      properties:
+        voice_query:
+          type: string
+          example: "Show all critical security issues in payment PRs"
+
+    QuerySpeakFilters:
+      type: object
+      properties:
+        severity:
+          type: string
+          nullable: true
+          example: "Critical"
+        category:
+          type: string
+          nullable: true
+          example: "Security"
+        keyword:
+          type: string
+          nullable: true
+          example: "payment"
+        repo:
+          type: string
+          nullable: true
+          example: "payment-service"
+
+    QuerySpeakResponse:
+      type: object
+      required:
+        - query
+        - interpreted_filters
+        - matching_comments
+        - matching_prs
+        - insight_summary
+        - total_matches
+      properties:
+        query:
+          type: string
+          example: "Show all critical security issues in payment PRs"
+        interpreted_filters:
+          $ref: '#/components/schemas/QuerySpeakFilters'
+        matching_comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewCommentItem'
+        matching_prs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PullRequestSummary'
+        insight_summary:
+          type: string
+          example: "Found 4 critical security findings across 2 payment pull requests, primarily involving hardcoded credentials and raw SQL queries."
+        total_matches:
+          type: integer
+          example: 4
+
+    TelemetryLogEntry:
+      type: object
+      required:
+        - timestamp
+        - level
+        - trace_id
+        - event
+        - message
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          type: string
+          example: "INFO"
+        trace_id:
+          type: string
+          example: "4bf92f3577b34da6a3ce929d0e0e4736"
+        event:
+          type: string
+          example: "voice_analysis_completed"
+        message:
+          type: string
+          example: "Voice review completed for PR-101. Readiness score: 25. Secrets redacted."
+
+    TelemetrySummaryResponse:
+      type: object
+      required:
+        - recent_traces
+        - metrics
+        - active_incidents
+        - recent_remediations
+      properties:
+        recent_traces:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryLogEntry'
+        metrics:
+          type: object
+          required:
+            - total_requests
+            - total_errors
+            - error_rate
+            - avg_duration_ms
+          properties:
+            total_requests:
+              type: integer
+              example: 148
+            total_errors:
+              type: integer
+              example: 1
+            error_rate:
+              type: number
+              format: float
+              example: 0.0067
+            avg_duration_ms:
+              type: number
+              format: float
+              example: 124.5
+        active_incidents:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              alert_type:
+                type: string
+              severity:
+                type: string
+              created_at:
+                type: string
+        recent_remediations:
+          type: array
+          items:
+            type: object
+            properties:
+              incident_id:
+                type: string
+              trace_id:
+                type: string
+              root_cause:
+                type: string
+              resolved_at:
+                type: string
+
+    IncidentSimulationRequest:
+      type: object
+      properties:
+        alert_type:
+          type: string
+          default: "VOICE_ANALYZE_FAILURE"
+          example: "VOICE_ANALYZE_FAILURE"
+        pr_id:
+          type: string
+          default: "PR-101"
+          example: "PR-101"
+        simulated_error:
+          type: string
+          default: "Simulated quota failure on upstream voice transcription."
+          example: "Simulated quota failure on upstream voice transcription."
+
+    IncidentSimulationResponse:
+      type: object
+      required:
+        - incident_id
+        - trace_id
+        - status
+        - root_cause_analysis
+        - remediation_diff
+        - verified_by_tests
+        - post_mortem_log
+      properties:
+        incident_id:
+          type: string
+          example: "INC-20261023-01"
+        trace_id:
+          type: string
+          example: "4bf92f3577b34da6a3ce929d0e0e4736"
+        status:
+          type: string
+          enum: [RESOLVED, TRIAGED, PENDING]
+          example: "RESOLVED"
+        root_cause_analysis:
+          type: string
+          example: "Upstream voice transcript parsing triggered rate limit exception. Activated deterministic heuristic tokenizer fallback."
+        remediation_diff:
+          type: string
+          example: "--- a/backend/app/services/voice_parser.py\n+++ b/backend/app/services/voice_parser.py\n@@ -24,2 +24,5 @@\n+    if not os.environ.get('GEMINI_API_KEY'):\n+        return deterministic_parse(transcript)"
+        verified_by_tests:
+          type: boolean
+          example: true
+        post_mortem_log:
+          type: string
+          example: "Automated On-Call Responder successfully engaged deterministic fallback. Zero secret leaks verified. Metrics restored to normal."
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+        - trace_id
+      properties:
+        detail:
+          type: string
+          example: "Resource not found"
+        trace_id:
+          type: string
+          example: "4bf92f3577b34da6a3ce929d0e0e4736"
+
+  responses:
+    NotFoundError:
+      description: The requested resource was not found.
+      headers:
+        X-Trace-ID:
+          $ref: '#/components/headers/X-Trace-ID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "Pull request 'PR-999' not found."
+            trace_id: "4bf92f3577b34da6a3ce929d0e0e4736"
+
+    BadRequestError:
+      description: Invalid request parameters or unparseable payload.
+      headers:
+        X-Trace-ID:
+          $ref: '#/components/headers/X-Trace-ID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "Transcript cannot be empty."
+            trace_id: "4bf92f3577b34da6a3ce929d0e0e4736"
+
+    ValidationError:
+      description: Schema or field validation failed.
+      headers:
+        X-Trace-ID:
+          $ref: '#/components/headers/X-Trace-ID'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: array
+                items:
+                  type: object
+              trace_id:
+                type: string
+                example: "4bf92f3577b34da6a3ce929d0e0e4736"
+
+    InternalServerError:
+      description: Internal server error with correlated trace ID.
+      headers:
+        X-Trace-ID:
+          $ref: '#/components/headers/X-Trace-ID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "Internal processing error occurred."
+            trace_id: "4bf92f3577b34da6a3ce929d0e0e4736"
