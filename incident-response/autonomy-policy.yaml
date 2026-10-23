@@ -1,0 +1,34 @@
+# On-Call Responder Agent Autonomy & Safety Policy
+# DataTalksClub AI Dev Tools Zoomcamp Rubric — Criterion 12 (Bounded Autonomy)
+
+version: "1.0"
+agent_role: "role:oncall"
+bounded_permissions:
+  allowed_read_operations:
+    - "telemetry.logs.by_trace_id"
+    - "metrics.prometheus.query"
+    - "database.incident_records.read"
+    - "source_code.ast_inspection"
+    - "openapi.contract.read"
+
+  forbidden_operations:
+    - "database.drop_table"
+    - "database.truncate"
+    - "git.force_push_production"
+    - "secrets.read_unredacted"
+    - "environment.export_api_keys"
+
+  allowed_remediation_actions:
+    - "generate_bounded_git_diff_patch"
+    - "activate_deterministic_fallback_mode"
+    - "reset_error_rate_metric"
+    - "write_post_mortem_audit_record"
+    - "mark_incident_resolved"
+
+verification_gates:
+  pre_execution:
+    - "verify_trace_id_present"
+    - "verify_zero_secret_leaks_in_patch"
+  post_execution:
+    - "execute_unit_tests"
+    - "verify_recovery_status_200"
