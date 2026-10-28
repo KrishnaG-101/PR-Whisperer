@@ -1,0 +1,15 @@
+groups:
+  - name: pr_whisperer_user_impact_alerts
+    rules:
+      - alert: HighVoiceAnalyzeFailureRate
+        expr: increase(pr_whisperer_voice_analyze_errors_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          tier: voice-ingestion
+          incident_type: user_impact_voice_pipeline_failure
+        annotations:
+          summary: "High voice analysis failure rate detected on PR review pipeline"
+          description: "PR-Whisperer voice analysis endpoint encountered critical failures, degrading hands-free review throughput. Active alert dispatched to autonomous On-Call Responder Agent."
+          remediation: "Execute autonomous on-call remediation: python incident-response/responder.py --trace-id $labels.trace_id"
+          dashboard_url: "http://localhost:3001/d/pr-whisperer-ops/pr-whisperer-observability"

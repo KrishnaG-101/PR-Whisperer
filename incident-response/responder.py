@@ -3,7 +3,7 @@ import sys
 import json
 import uuid
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 INCIDENTS_DIR = os.path.join(os.path.dirname(__file__), "incidents")
@@ -26,7 +26,7 @@ def run_oncall_remediation(
         "incident_id": inc_id,
         "trace_id": tr_id,
         "alert_name": "HighVoiceAnalyzeFailureRate",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "error_signature": error_msg,
         "policy_verified": "incident-response/autonomy-policy.yaml",
     }
@@ -74,7 +74,7 @@ def run_oncall_remediation(
 - **Correlated Trace ID**: `{tr_id}`
 - **Trigger Metric**: `voice_analyze_error_rate > 0`
 - **Resolution Status**: `RESOLVED_BY_ONCALL_AGENT`
-- **Timestamp**: `{datetime.utcnow().isoformat()}Z`
+- **Timestamp**: `{datetime.now(timezone.utc).isoformat()}`
 
 ---
 

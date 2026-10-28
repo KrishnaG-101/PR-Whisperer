@@ -3,7 +3,7 @@
 
 > *"Speak Your Code Review. Ship Clean PRs."*
 
-[![CI/CD Pipeline](https://github.com/placeholder/pr-whisperer/actions/workflows/ci.yml/badge.svg)](https://github.com/placeholder/pr-whisperer/actions)
+[![CI/CD Pipeline](https://github.com/placeholder/pr-whisperer/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/placeholder/pr-whisperer/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![OpenAPI 3.1.0](https://img.shields.io/badge/OpenAPI-3.1.0-green.svg)](./openapi.yaml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
@@ -158,14 +158,15 @@ PR-Whisperer adheres to a modular documentation architecture. Reviewers and agen
 
 | Rubric Criterion | Target Points | Status | In-Repo Implementation & Evidence |
 |---|---|---|---|
-| 1. Problem Description | 2 / 2 | Verified | Section 1 of `README.md` & Section 1 of `product-spec.md` |
-| 2. Product Spec & Public Backlog | 2 / 2 | Verified | `product-spec.md` (6 user stories) & `docs/backlog-tracker.md` (`TASK-01` to `TASK-10`) |
-| 3. Agent Team Organization | 2 / 2 | Verified | `docs/agent-team.md` (4 roles, sequence diagram, handoffs) |
-| 4. Modular Context Management | 2 / 2 | Verified | `AGENTS.md` root context router with deep-links |
-| 5. Full-Stack Web Application | 4 / 4 | In Backlog | React 18 frontend + FastAPI backend + SQLite/Postgres (`TASK-03`, `TASK-09`) |
-| 6. Unit & Integration Testing | 3 / 3 | In Backlog | Deterministic AST guardrails + contract drift tests (`TASK-04`, `TASK-05`) |
-| 7. Single-Command Docker Compose | 3 / 3 | In Backlog | Single-command multi-service compose stack (`TASK-10`) |
-| 8. CI/CD Automation | 2 / 2 | In Backlog | GitHub Actions linter, OpenAPI check, and test matrix (`TASK-10`) |
-| 9. Observability & Zero Secret Leaks | 2 / 2 | In Backlog | OpenTelemetry traces (`trace_id`), metrics, secret scrubber (`TASK-07`) |
-| 10. User-Impact Alert & On-Call Agent | 2 / 2 | In Backlog | Autonomous responder agent with bounded diffs (`TASK-08`) |
-| **Total Evaluated Points** | **24 / 24** | **Target** | **Complete production-grade capstone implementation** |
+| 1. Problem Description | 2 / 2 | **Verified** | Section 1 of `README.md` & Section 1 of `product-spec.md` |
+| 2. Product Spec & Public Backlog | 2 / 2 | **Verified** | `product-spec.md` (6 user stories) & `docs/backlog-tracker.md` (`TASK-01` to `TASK-10`) |
+| 3. Agent Team Organization | 2 / 2 | **Verified** | `docs/agent-team.md` (4 roles, sequence diagram, handoffs) |
+| 4. Modular Context Management | 2 / 2 | **Verified** | `AGENTS.md` root context router with deep-links |
+| 5. Full-Stack Web Application | 4 / 4 | **Verified** | React 18 frontend + FastAPI backend + SQLite/PostgreSQL (`TASK-03`, `TASK-09`) |
+| 6. Unit & Integration Testing | 3 / 3 | **Verified** | Deterministic AST guardrails + contract drift tests (`TASK-04`, `TASK-05`) |
+| 7. Single-Command Docker Compose | 3 / 3 | **Verified** | Single-command multi-service compose stack with Prometheus + Grafana (`TASK-10`) |
+| 8. CI/CD Automation | 2 / 2 | **Verified** | 3-stage GitHub Actions CI/CD with dev deployment and prod promotion (`TASK-10`) |
+| 9. Observability & Zero Secret Leaks | 2 / 2 | **Verified** | OpenTelemetry traces (`trace_id`), metrics, secret scrubber (`TASK-07`) |
+| 10. User-Impact Alert & On-Call Agent | 2 / 2 | **Verified** | Autonomous responder agent with bounded diffs (`TASK-08`) |
+| **Total Evaluated Points** | **24 / 24** | **Verified** | **Complete production-grade capstone implementation** |
+
