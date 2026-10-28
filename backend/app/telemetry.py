@@ -5,7 +5,7 @@ import uuid
 import time
 import logging
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
@@ -74,8 +74,9 @@ def record_telemetry_event(
 ) -> Dict[str, Any]:
     """Emits structured JSON log with trace correlation and zero leaked secrets."""
     safe_message = sanitize_telemetry_payload(message)
+    now_utc = datetime.now(timezone.utc)
     entry = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": now_utc.isoformat(),
         "level": level,
         "trace_id": trace_id,
         "event": event,
@@ -85,7 +86,7 @@ def record_telemetry_event(
 
     # Store in memory buffer
     RECENT_TRACES.appendleft({
-        "timestamp": datetime.utcnow(),
+        "timestamp": now_utc,
         "level": level,
         "trace_id": trace_id,
         "event": event,
@@ -143,12 +144,16 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
         request.state.trace_id = trace_id
         start_time = time.perf_counter()
 
-        record_telemetry_event(
-            trace_id=trace_id,
-            event="http_request_received",
-            message=f"{request.method} {request.url.path}",
-            level="INFO",
-        )
+        # Exclude high-frequency infrastructure polls from polluting user trace drawer
+        is_infrastructure_poll = request.url.path in ("/metrics", "/metrics/", "/api/v1/health")
+
+        if not is_infrastructure_poll:
+            record_telemetry_event(
+                trace_id=trace_id,
+                event="http_request_received",
+                message=f"{request.method} {request.url.path}",
+                level="INFO",
+            )
 
         try:
             response: Response = await call_next(request)
@@ -161,12 +166,13 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
                 status_code=str(response.status_code),
             ).inc()
 
-            record_telemetry_event(
-                trace_id=trace_id,
-                event="http_request_completed",
-                message=f"{request.method} {request.url.path} returned {response.status_code} in {duration_ms:.2f}ms",
-                level="INFO",
-            )
+            if not is_infrastructure_poll:
+                record_telemetry_event(
+                    trace_id=trace_id,
+                    event="http_request_completed",
+                    message=f"{request.method} {request.url.path} returned {response.status_code} in {duration_ms:.2f}ms",
+                    level="INFO",
+                )
             return response
 
         except Exception as exc:

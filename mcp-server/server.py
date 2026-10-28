@@ -17,95 +17,110 @@ def get_db_connection():
 
 def list_open_pr_reviews() -> List[Dict[str, Any]]:
     """Lists open pull requests and their latest readiness scores."""
+    fallback_prs = [
+        {
+            "id": "PR-101",
+            "title": "feat(payments): Add Stripe webhook retry & customer charge endpoint",
+            "latest_readiness_score": 25,
+            "status": "OPEN",
+        },
+        {
+            "id": "PR-102",
+            "title": "refactor(auth): Async session middleware & JWT token refresh",
+            "latest_readiness_score": 55,
+            "status": "OPEN",
+        },
+        {
+            "id": "PR-103",
+            "title": "feat(analytics): Real-time team velocity & PR cycle time dashboard",
+            "latest_readiness_score": 30,
+            "status": "OPEN",
+        },
+    ]
     if not os.path.exists(DB_PATH):
-        return [
-            {
-                "id": "PR-101",
-                "title": "feat(payments): Add Stripe webhook retry & customer charge endpoint",
-                "latest_readiness_score": 25,
-                "status": "OPEN",
-            },
-            {
-                "id": "PR-102",
-                "title": "refactor(auth): Async session middleware & JWT token refresh",
-                "latest_readiness_score": 55,
-                "status": "OPEN",
-            },
-            {
-                "id": "PR-103",
-                "title": "feat(analytics): Real-time team velocity & PR cycle time dashboard",
-                "latest_readiness_score": 30,
-                "status": "OPEN",
-            },
-        ]
+        return fallback_prs
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT pr.id, pr.pr_number, pr.title, pr.repo_name, pr.branch_name, pr.status,
-               (SELECT readiness_score FROM review_session_records WHERE pr_id = pr.id ORDER BY created_at DESC LIMIT 1) as latest_readiness_score
-        FROM pr_records pr
-        ORDER BY pr.created_at DESC
-    """)
-    rows = cursor.fetchall()
-    results = [dict(row) for row in rows]
-    conn.close()
-    return results
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT pr.id, pr.pr_number, pr.title, pr.repo_name, pr.branch_name, pr.status,
+                   (SELECT readiness_score FROM review_session_records WHERE pr_id = pr.id ORDER BY created_at DESC LIMIT 1) as latest_readiness_score
+            FROM pr_records pr
+            ORDER BY pr.created_at DESC
+        """)
+        rows = cursor.fetchall()
+        results = [dict(row) for row in rows]
+        conn.close()
+        return results if results else fallback_prs
+    except (sqlite3.OperationalError, sqlite3.DatabaseError):
+        return fallback_prs
 
 
 def get_agent_fix_pack(pr_id: str) -> Dict[str, Any]:
     """Retrieves full voice review fix pack and line-pinned comments for coding agents."""
+    clean_id = str(pr_id).strip()
+    alt_id = f"PR-{clean_id}" if not clean_id.startswith("PR-") else clean_id.replace("PR-", "")
+
+    fallback_pack = {
+        "pr_id": clean_id,
+        "status": "SAMPLE_DATA",
+        "agent_fix_prompt": (
+            f"# Coding Agent Fix Specification for {clean_id}\n\n"
+            "1. Move hardcoded Stripe secret `sk_live_...` to environment variable.\n"
+            "2. Parameterize raw SQL f-string query on line 38.\n"
+            "3. Restore `currency` field in payment request schema to prevent contract drift."
+        ),
+        "readiness_score": 25,
+    }
+
     if not os.path.exists(DB_PATH):
-        return {
-            "pr_id": pr_id,
-            "status": "SAMPLE_DATA",
-            "agent_fix_prompt": (
-                f"# Coding Agent Fix Specification for {pr_id}\n\n"
-                "1. Move hardcoded Stripe secret `sk_live_...` to environment variable.\n"
-                "2. Parameterize raw SQL f-string query on line 38.\n"
-                "3. Restore `currency` field in payment request schema to prevent contract drift."
-            ),
-            "readiness_score": 25,
-        }
+        return fallback_pack
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Query PR
-    cursor.execute("SELECT * FROM pr_records WHERE id = ? OR pr_number = ?", (pr_id, pr_id))
-    pr_row = cursor.fetchone()
-    if not pr_row:
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Query PR with normalized IDs (e.g. 'PR-101', '101')
+        cursor.execute(
+            "SELECT * FROM pr_records WHERE id = ? OR pr_number = ? OR id = ? OR pr_number = ?",
+            (clean_id, clean_id, alt_id, alt_id),
+        )
+        pr_row = cursor.fetchone()
+        if not pr_row:
+            conn.close()
+            return {"error": f"Pull request '{clean_id}' not found."}
+
+        # Query latest review session
+        cursor.execute("""
+            SELECT * FROM review_session_records 
+            WHERE pr_id = ? 
+            ORDER BY created_at DESC LIMIT 1
+        """, (pr_row["id"],))
+        session_row = cursor.fetchone()
         conn.close()
-        return {"error": f"Pull request {pr_id} not found."}
 
-    # Query latest review session
-    cursor.execute("""
-        SELECT * FROM review_session_records 
-        WHERE pr_id = ? 
-        ORDER BY created_at DESC LIMIT 1
-    """, (pr_row["id"],))
-    session_row = cursor.fetchone()
-    conn.close()
+        if not session_row:
+            return {
+                "pr_id": pr_row["id"],
+                "title": pr_row["title"],
+                "status": "NO_REVIEW_YET",
+                "message": "PR has not undergone voice review analysis yet. Submit voice critique first.",
+            }
 
-    if not session_row:
         return {
             "pr_id": pr_row["id"],
             "title": pr_row["title"],
-            "status": "NO_REVIEW_YET",
-            "message": "PR has not undergone voice review analysis yet. Submit voice critique first.",
+            "repo_name": pr_row["repo_name"],
+            "branch_name": pr_row["branch_name"],
+            "readiness_score": session_row["readiness_score"],
+            "summary_markdown": session_row["summary_markdown"],
+            "agent_fix_prompt": session_row["agent_fix_prompt"],
+            "comments": json.loads(session_row["comments_json"]) if session_row["comments_json"] else [],
+            "guardrail_alerts": json.loads(session_row["guardrails_json"]) if session_row["guardrails_json"] else [],
         }
-
-    return {
-        "pr_id": pr_row["id"],
-        "title": pr_row["title"],
-        "repo_name": pr_row["repo_name"],
-        "branch_name": pr_row["branch_name"],
-        "readiness_score": session_row["readiness_score"],
-        "summary_markdown": session_row["summary_markdown"],
-        "agent_fix_prompt": session_row["agent_fix_prompt"],
-        "comments": json.loads(session_row["comments_json"]) if session_row["comments_json"] else [],
-        "guardrail_alerts": json.loads(session_row["guardrails_json"]) if session_row["guardrails_json"] else [],
-    }
+    except (sqlite3.OperationalError, sqlite3.DatabaseError):
+        return fallback_pack
 
 
 def handle_json_rpc(request: Dict[str, Any]) -> Dict[str, Any]:
