@@ -1,14 +1,10 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
 from backend.app.database import Base
-
-
-def get_utc_now():
-    return datetime.now(timezone.utc)
 
 
 class PRRecord(Base):
@@ -26,8 +22,8 @@ class PRRecord(Base):
     diff_text = Column(Text, nullable=False)
     files_changed_json = Column(Text, default="[]", nullable=False)
     sample_voice_prompt = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     review_sessions = relationship(
         "ReviewSessionRecord",
@@ -67,7 +63,7 @@ class ReviewSessionRecord(Base):
     agent_fix_prompt = Column(Text, default="", nullable=False)
     comments_json = Column(Text, default="[]", nullable=False)
     guardrails_json = Column(Text, default="[]", nullable=False)
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     pr = relationship("PRRecord", back_populates="review_sessions")
 
@@ -99,7 +95,7 @@ class IncidentRecord(Base):
     agent_diagnosis = Column(Text, nullable=True)
     proposed_fix_diff = Column(Text, nullable=True)
     resolved_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     @property
     def evidence_packet(self) -> Dict[str, Any]:

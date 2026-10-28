@@ -1,10 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
-
-
-def get_utc_now() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 class HealthResponse(BaseModel):
@@ -53,7 +49,7 @@ class ReviewCommentItem(BaseModel):
     spoken_excerpt: str
     polished_comment: str
     suggested_patch: str
-    created_at: datetime = Field(default_factory=get_utc_now)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class GuardrailAlert(BaseModel):
@@ -66,7 +62,7 @@ class GuardrailAlert(BaseModel):
     file_path: str
     line_number: int
     description: str
-    created_at: datetime = Field(default_factory=get_utc_now)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class VoiceReviewSession(BaseModel):
@@ -82,7 +78,7 @@ class VoiceReviewSession(BaseModel):
     agent_fix_prompt: str
     comments: List[ReviewCommentItem] = Field(default_factory=list)
     guardrail_alerts: List[GuardrailAlert] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=get_utc_now)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class PullRequestDetail(PullRequestSummary):
@@ -119,7 +115,7 @@ class QuerySpeakResponse(BaseModel):
 
 
 class TelemetryLogEntry(BaseModel):
-    timestamp: datetime = Field(default_factory=get_utc_now)
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
     level: str = "INFO"
     trace_id: str
     event: str

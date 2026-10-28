@@ -15,10 +15,10 @@ This document serves as the canonical in-repo public task tracker. It records ta
 | [`TASK-04`](#task-04-deterministic-guardrails--openapi-drift-engine) | Deterministic Guardrails & OpenAPI Drift Engine | `role:swe`, `role:qa` | US-03 | **DONE** | Pytest Guardrail Scanner Unit Tests |
 | [`TASK-05`](#task-05-wispr-flow-transcript-parser--fallback-engine) | Wispr Flow Transcript Parser & Fallback Engine | `role:swe` | US-02, US-04 | **DONE** | Pytest Transcript Parsing & Patch Output |
 | [`TASK-06`](#task-06-queryspeak-voice-audit-engine) | QuerySpeak Voice Audit Engine | `role:swe` | US-05 | **DONE** | Pytest NL Filter Extraction Tests |
-| [`TASK-07`](#task-07-opentelemetry-pipeline-metrics--secret-scrubber) | OpenTelemetry Pipeline, Metrics & Secret Scrubber | `role:swe`, `role:oncall`| US-06 | **DONE** | OpenTelemetry Trace & Secret Scrub Unit Tests |
-| [`TASK-08`](#task-08-on-call-responder-agent--incident-drill-engine) | On-Call Responder Agent & Incident Drill Engine | `role:oncall` | US-06 | **DONE** | Autonomous Incident Drill Simulation |
-| [`TASK-09`](#task-09-react--tailwind--vite-split-pane-review-studio-ui) | React + Tailwind + Vite Split-Pane Review Studio UI | `role:swe` | US-01 to US-06 | **DONE** | Vite Build & Component Verification |
-| [`TASK-10`](#task-10-single-command-docker-compose--cicd-pipeline) | Single-Command Docker Compose & CI/CD Pipeline | `role:qa`, `role:swe` | All US | **DONE** | Docker Compose Up & GitHub Actions Linter |
+| [`TASK-07`](#task-07-opentelemetry-pipeline-metrics--secret-scrubber) | OpenTelemetry Pipeline, Metrics & Secret Scrubber | `role:swe`, `role:oncall`| US-06 | **TODO** | OpenTelemetry Trace & Secret Scrub Unit Tests |
+| [`TASK-08`](#task-08-on-call-responder-agent--incident-drill-engine) | On-Call Responder Agent & Incident Drill Engine | `role:oncall` | US-06 | **TODO** | Autonomous Incident Drill Simulation |
+| [`TASK-09`](#task-09-react--tailwind--vite-split-pane-review-studio-ui) | React + Tailwind + Vite Split-Pane Review Studio UI | `role:swe` | US-01 to US-06 | **TODO** | Vite Build & Component Verification |
+| [`TASK-10`](#task-10-single-command-docker-compose--cicd-pipeline) | Single-Command Docker Compose & CI/CD Pipeline | `role:qa`, `role:swe` | All US | **TODO** | Docker Compose Up & GitHub Actions Linter |
 
 ---
 
@@ -180,52 +180,35 @@ This document serves as the canonical in-repo public task tracker. It records ta
 ### TASK-07: OpenTelemetry Pipeline, Metrics & Secret Scrubber
 - **Assigned Role**: `role:swe`, `role:oncall`
 - **User Story**: US-06 (Observability & Alerting)
-- **Status**: **DONE**
+- **Status**: **TODO**
 - **Description**: Instrument FastAPI with OpenTelemetry tracing, span injection (`trace_id`), Prometheus error/latency metrics, and a deterministic secret scrubber that redacts credentials from logs and spans.
 - **Acceptance Criteria**:
   - `trace_id` returned in HTTP response headers (`X-Trace-ID`) and correlated in JSON logs.
   - Prometheus metrics track `pr_review_requests_total` and `voice_analyze_error_rate`.
   - Zero sensitive tokens or API keys exposed in telemetry.
 - **Agent Execution Log**:
-  - **Timestamp**: `2026-10-28T07:12:00Z`
-  - **Executing Agent**: `Antigravity Assistant (role:swe, role:oncall)`
-  - **Verification Method**: `pytest tests/unit/test_voice_analyzer.py::test_secret_redaction_telemetry tests/integration/test_api_workflow.py::test_prometheus_metrics_endpoint`
-  - **Output Snippet**:
-    ```
-    tests/unit/test_voice_analyzer.py::test_secret_redaction_telemetry PASSED
-    tests/integration/test_api_workflow.py::test_prometheus_metrics_endpoint PASSED
-    [PASS] OpenTelemetry W3C trace_id propagation validated.
-    [PASS] Secret scrubber masked sk_live_ credentials with zero leakages.
-    ```
+  - *Pending execution.*
 
 ---
 
 ### TASK-08: On-Call Responder Agent & Incident Drill Engine
 - **Assigned Role**: `role:oncall`
 - **User Story**: US-06 (Automated Remediation)
-- **Status**: **DONE**
+- **Status**: **TODO**
 - **Description**: Build autonomous On-Call Responder Agent (`incident-response/responder.py`) and incident drill endpoint `POST /api/v1/incidents/simulate-and-respond`.
 - **Acceptance Criteria**:
   - Simulates user-impact error spike (`voice_analyze_error_rate > 0`).
   - Responder agent inspects read-only telemetry packet by `trace_id`.
   - Proposes bounded git diff remediation, clears incident, and writes auditable post-mortem record.
 - **Agent Execution Log**:
-  - **Timestamp**: `2026-10-28T07:15:00Z`
-  - **Executing Agent**: `Antigravity Assistant (role:oncall)`
-  - **Verification Method**: `pytest tests/integration/test_api_workflow.py::test_incident_drill_and_oncall_remediation`
-  - **Output Snippet**:
-    ```
-    tests/integration/test_api_workflow.py::test_incident_drill_and_oncall_remediation PASSED
-    [PASS] Simulated user-impact alert registered with status TRIGGERED.
-    [PASS] On-Call Agent diagnosed root cause, generated remediation diff, and updated status to RESOLVED_BY_ONCALL_AGENT.
-    ```
+  - *Pending execution.*
 
 ---
 
 ### TASK-09: React + Tailwind + Vite Split-Pane Review Studio UI
 - **Assigned Role**: `role:swe`
 - **User Story**: US-01, US-02, US-04, US-05, US-06
-- **Status**: **DONE**
+- **Status**: **TODO**
 - **Description**: Build high-performance React 18 single-page application with Split-Pane Diff Viewer, Wispr Flow Voice Review Bar (with mock audio/speech input), QuerySpeak drawer, Readiness Score badge, and Live Telemetry Drawer.
 - **Acceptance Criteria**:
   - Modern, responsive dark-mode UI with Tailwind CSS and Lucide React icons.
@@ -233,43 +216,17 @@ This document serves as the canonical in-repo public task tracker. It records ta
   - Interactive line highlighting and 1-click Coding Agent prompt copy.
   - Telemetry drawer displaying live `trace_id`, metrics, and incident status.
 - **Agent Execution Log**:
-  - **Timestamp**: `2026-10-28T07:18:00Z`
-  - **Executing Agent**: `Antigravity Assistant (role:swe)`
-  - **Verification Method**: `npm run build` in `frontend/`
-  - **Output Snippet**:
-    ```
-    vite v8.3.5 building client environment for production...
-    transforming...
-    ✓ 1962 modules transformed.
-    rendering chunks...
-    dist/index.html                   1.08 kB │ gzip:  0.61 kB
-    dist/assets/index-fVHPIweg.css   30.19 kB │ gzip:  6.13 kB
-    dist/assets/index-BPWPmc1L.js   286.59 kB │ gzip: 84.71 kB
-    ✓ built in 1.84s
-    ```
+  - *Pending execution.*
 
 ---
 
 ### TASK-10: Single-Command Docker Compose & CI/CD Pipeline
 - **Assigned Role**: `role:qa`, `role:swe`
 - **User Story**: Rubric Criteria 7 & 8 (Single-Command Docker Compose & CI/CD)
-- **Status**: **DONE**
+- **Status**: **TODO**
 - **Description**: Author `docker-compose.yml`, multi-stage Dockerfiles for backend and frontend, and GitHub Actions CI workflow covering linting, contract validation, unit tests, and integration tests.
 - **Acceptance Criteria**:
   - `docker compose up --build` launches frontend on `:5173`, backend on `:8000`, postgres on `:5432`, and telemetry.
   - `.github/workflows/ci.yml` runs automated checks on push and PR.
 - **Agent Execution Log**:
-  - **Timestamp**: `2026-10-28T07:20:00Z`
-  - **Executing Agent**: `Antigravity Assistant (role:qa, role:swe)`
-  - **Verification Method**: `docker compose config`
-  - **Output Snippet**:
-    ```
-    name: pr-whisperer
-    services:
-      backend: (FastAPI on port 8000)
-      db: (PostgreSQL 16 on port 5432)
-      frontend: (Nginx + React 18 on port 5173)
-      prometheus: (Scraper on port 9090)
-    [PASS] Docker Compose configuration validated without errors.
-    [PASS] GitHub Actions .github/workflows/ci.yml created covering backend, frontend, docker, and dev/prod promotion.
-    ```
+  - *Pending execution.*

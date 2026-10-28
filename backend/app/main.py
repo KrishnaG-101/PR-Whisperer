@@ -3,7 +3,7 @@ import re
 import json
 import uuid
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, status
@@ -156,13 +156,12 @@ def create_pull_request(payload: PullRequestCreate, db: Session = Depends(get_db
     if not changed_files:
         changed_files = ["app/main.py"]
 
-    existing_nums = [int(p.pr_number) for p in db.query(PRRecord.pr_number).all() if p.pr_number and p.pr_number.isdigit()]
-    next_num = max(existing_nums, default=100) + 1
-    new_id = f"PR-{next_num}"
+    count = db.query(PRRecord).count() + 1
+    new_id = f"PR-{100 + count}"
 
     pr = PRRecord(
         id=new_id,
-        pr_number=str(next_num),
+        pr_number=str(100 + count),
         title=payload.title,
         repo_name=payload.repo_name,
         author=payload.author,
@@ -267,7 +266,7 @@ async def voice_analyze_pr(
             "pr_id": pr.id,
             "trace_id": trace_id,
             "severity": "Critical",
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": payload.spoken_transcript,
         }
         INCIDENT_REGISTRY.append(alert_event)
 
@@ -472,13 +471,11 @@ def simulate_incident_and_respond(
 
     # Record resolution in database
     inc_record = db.query(IncidentRecord).filter(IncidentRecord.trace_id == trace_id).first()
-    if not inc_record:
-        inc_record = db.query(IncidentRecord).filter(IncidentRecord.status == "TRIGGERED").order_by(IncidentRecord.created_at.desc()).first()
     if inc_record:
         inc_record.status = "RESOLVED_BY_ONCALL_AGENT"
         inc_record.agent_diagnosis = result["root_cause_analysis"]
         inc_record.proposed_fix_diff = result["remediation_diff"]
-        inc_record.resolved_at = datetime.now(timezone.utc)
+        inc_record.resolved_at = datetime.utcnow()
         db.commit()
 
     # Clear active incident from memory registry
@@ -487,7 +484,7 @@ def simulate_incident_and_respond(
         "incident_id": result["incident_id"],
         "trace_id": result["trace_id"],
         "root_cause": result["root_cause_analysis"][:80],
-        "resolved_at": datetime.now(timezone.utc).isoformat(),
+        "resolved_at": datetime.utcnow().isoformat(),
     })
 
     record_telemetry_event(

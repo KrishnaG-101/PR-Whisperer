@@ -4,13 +4,9 @@ import uuid
 import json
 import logging
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timezone
+from datetime import datetime
 
 logger = logging.getLogger("pr_whisperer.analyzer")
-
-
-def get_iso_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 # Rule IDs and Metadata
 RULE_SEC_01 = "RULE-SEC-01"  # Hardcoded Live Secret Key
@@ -92,7 +88,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 14,
                     "description": "Detected hardcoded live secret key matching pattern 'sk_live_...'. Move credentials to environment variables.",
-                    "created_at": get_iso_now(),
+                    "created_at": datetime.utcnow().isoformat(),
                 })
 
             # 2. Raw SQL String Interpolation
@@ -106,7 +102,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 38,
                     "description": "Unescaped raw SQL string formatting opens a direct SQL injection vulnerability. Parameterize query inputs.",
-                    "created_at": get_iso_now(),
+                    "created_at": datetime.utcnow().isoformat(),
                 })
 
             # 3. Leaked Credentials in Logs
@@ -119,7 +115,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 27,
                     "description": "Plaintext Authorization header or token logged in runtime statement. Redact credentials before logging.",
-                    "created_at": get_iso_now(),
+                    "created_at": datetime.utcnow().isoformat(),
                 })
 
             # 4. Silent Bare Exception Swallowing
@@ -133,7 +129,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 52,
                     "description": "Bare except clause swallowing exceptions silently hides expired tokens and authentication failures.",
-                    "created_at": get_iso_now(),
+                    "created_at": datetime.utcnow().isoformat(),
                 })
 
             # 5. N+1 Query Loop
@@ -146,7 +142,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 44,
                     "description": "Database query executed within iterative loop causes severe N+1 latency degradation. Batch query using SQL IN.",
-                    "created_at": get_iso_now(),
+                    "created_at": datetime.utcnow().isoformat(),
                 })
 
             # 6. OpenAPI Contract Drift
@@ -160,7 +156,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                         "file_path": current_file if "schema" in current_file else "backend/schemas/payment.py",
                         "line_number": 5,
                         "description": "Removed field 'currency' from request schema without updating openapi.yaml or deprecation window.",
-                        "created_at": get_iso_now(),
+                        "created_at": datetime.utcnow().isoformat(),
                     })
 
             current_line += 1
@@ -177,7 +173,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
             "file_path": "backend/schemas/payment.py",
             "line_number": 5,
             "description": "Detected schema field deletion in PaymentChargeRequest causing OpenAPI v1 specification divergence.",
-            "created_at": get_iso_now(),
+            "created_at": datetime.utcnow().isoformat(),
         })
 
     return alerts
@@ -350,7 +346,7 @@ def parse_spoken_critique_into_comments(
             "spoken_excerpt": sentence,
             "polished_comment": polished,
             "suggested_patch": patch,
-            "created_at": get_iso_now(),
+            "created_at": datetime.utcnow().isoformat(),
         })
 
     return comments
@@ -530,5 +526,5 @@ async def analyze_voice_review(
         "agent_fix_prompt": fix_prompt,
         "comments": comments,
         "guardrail_alerts": guardrail_alerts,
-        "created_at": get_iso_now(),
+        "created_at": datetime.utcnow().isoformat(),
     }
