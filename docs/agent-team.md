@@ -69,7 +69,7 @@ sequenceDiagram
 - **Artifacts Owned**:
   - `tests/unit/` (Regex security scanners, AST validators, contract drift logic)
   - `tests/integration/` (FastAPI TestClient, SQLite transactions, simulated voice reviews)
-  - `.github/workflows/ci.yml` (Automated CI/CD validation)
+  - `.github/workflows/ci-cd.yml` (3-stage automated CI/CD validation and release promotion)
 - **Primary Tools**:
   - Pytest, Pytest-Cov, Flake8, Spectral (OpenAPI linter), Docker Compose validator.
 - **Operating Guardrails**:

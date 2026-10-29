@@ -3,7 +3,7 @@
 
 > *"Speak Your Code Review. Ship Clean PRs."*
 
-[![CI/CD Pipeline](https://github.com/placeholder/pr-whisperer/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/placeholder/pr-whisperer/actions)
+[![CI/CD Pipeline](https://github.com/KrishnaG-101/PR-Whisperer/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/KrishnaG-101/PR-Whisperer/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![OpenAPI 3.1.0](https://img.shields.io/badge/OpenAPI-3.1.0-green.svg)](./openapi.yaml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
@@ -93,6 +93,7 @@ docker compose up --build
 - **Frontend Studio**: [http://localhost:5173](http://localhost:5173)
 - **FastAPI Backend & Interactive API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Prometheus Metrics**: [http://localhost:9090](http://localhost:9090)
+- **Grafana Live Observability Dashboard**: [http://localhost:3001](http://localhost:3001) (Pre-configured anonymous viewer or `admin`/`admin`)
 - **Health Check Endpoint**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 
 ### Option B: Local Development (Zero-Config SQLite)

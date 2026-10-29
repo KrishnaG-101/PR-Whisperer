@@ -63,7 +63,7 @@ Before any payload, error traceback, or transcript snippet is passed to the Open
 - **Passwords & Connection Strings**: Matches URI connection strings containing `postgres://user:password@...` and strips the credential component.
 
 ### 3.2 Automated Leak Verification
-Unit test `tests/unit/test_telemetry_scrubber.py` validates that synthetic logs containing 15 different real-world secret formats are 100% neutralized before export.
+Unit test `tests/unit/test_voice_analyzer.py::test_secret_redaction_telemetry` validates that synthetic logs containing real-world API keys and credentials are 100% neutralized to `[REDACTED_API_KEY]` before export.
 
 ---
 
@@ -73,10 +73,9 @@ PR-Whisperer exposes metrics via the standard `/metrics` endpoint for Prometheus
 
 | Metric Name | Type | Description |
 |---|---|---|
-| `pr_review_requests_total` | Counter | Total number of voice review analyses requested, partitioned by `pr_id` and `status`. |
-| `voice_analyze_error_rate` | Gauge / Ratio | Ratio of failed voice review requests over the last 60 seconds (Alert trigger: `> 0`). |
-| `voice_analyze_duration_seconds` | Histogram | Request latency distribution for voice transcription and AST analysis. |
-| `guardrail_violations_total` | Counter | Total security and contract drift violations caught, labeled by `rule_id` and `severity`. |
+| `pr_whisperer_requests_total` | Counter | Total number of HTTP requests received, labeled by `method`, `endpoint`, and `status_code`. |
+| `pr_whisperer_voice_analyze_errors_total` | Counter | Total failures during voice review pipeline, labeled by `pr_id` and `alert_type` (Alert trigger: `increase(...) > 0`). |
+| `pr_whisperer_request_duration_seconds` | Histogram | Latency distribution of HTTP requests across endpoints. |
 | `oncall_remediations_total` | Counter | Total incidents diagnosed and remediated by the On-Call Responder Agent. |
 
 ---
