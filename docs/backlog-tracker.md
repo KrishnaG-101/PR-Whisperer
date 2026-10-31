@@ -341,3 +341,37 @@ This document serves as the canonical in-repo public task tracker. It records ta
          Tests  4 passed (4)
     ✓ built in 6.00s (dist/index.html, CSS, JS 195.79 kB)
     ```
+
+---
+
+### TASK-13: Production GitHub Authentication, Live Repository & PR Browser, Direct Review Publishing (v1.2)
+- **Assigned Role**: 
+ole:swe, 
+ole:qa
+- **User Story**: Production GitHub Ecosystem Integration & Enterprise SaaS Polish
+- **Status**: **DONE**
+- **Description**: Implement dual-mode GitHub authentication, live repository and pull request browser, direct hands-free GitHub review publishing, and telemetry secret scrubbing for GitHub fine-grained PATs:
+  - **Dual-Mode Authentication (POST /api/v1/auth/github/connect)**: Accepts either a GitHub PAT (ghp_... / github_pat_...) or public username (KrishnaG-101) to load profile details and repositories, with an instant 1-click Reviewer Workspace bypass for zero-friction evaluations.
+  - **Live Repository & PR Activity Browser (GET /api/v1/github/repos/{owner}/{repo}/pulls & POST /api/v1/github/repos/{owner}/{repo}/import-activity)**: Allows reviewers to inspect real PRs or 1-click import the latest repository commit diff if no open pull requests exist.
+  - **Direct GitHub Review Publishing (POST /api/v1/prs/{pr_id}/publish-github-review)**: Directly creates structured GitHub PR reviews via the GitHub REST API when authenticated with a PAT, or synthesizes a formatted review preview with a ready-to-run gh pr review CLI command.
+  - **Security Guardrail**: Masking pattern added in ackend/app/telemetry.py for github_pat_[0-9a-zA-Z_]+ to prevent token leakage in traces and logs.
+  - **Enterprise UI Polish**: Top navbar user profile pill with dynamic connection badges (PAT Connected, GitHub Synced, Workspace Mode), responsive GitHub Hub modal, review queue split into Connected GitHub Activity and Benchmark Audit Queue, and 'Publish to GitHub' action.
+- **Acceptance Criteria**:
+  - Zero regression: All 26 Pytest tests and 4 Vitest component tests pass cleanly.
+  - Production Vite bundle builds with zero compile errors.
+  - 100% deterministic offline fallback guarantee when network or tokens are unavailable.
+- **Agent Execution Log**:
+  - **Timestamp**: 2026-10-31T17:52:00Z
+  - **Executing Agent**: Antigravity Assistant (role:swe, role:qa)
+  - **Verification Method**: pytest -v && cd frontend && npm test -- --run && npm run build
+  - **Output Snippet**:
+    `
+    ======================== 26 passed, 1 warning in 3.56s ========================
+    ✓ src/__tests__/App.test.jsx (4 tests) 420ms
+    Test Files  1 passed (1)
+         Tests  4 passed (4)
+    ✓ 1970 modules transformed.
+    dist/assets/index-OI7v9W4t.css   26.34 kB │ gzip:  5.28 kB
+    dist/assets/index-CpWvT6JO.js   214.91 kB │ gzip: 62.59 kB
+    ✓ built in 5.02s
+    `

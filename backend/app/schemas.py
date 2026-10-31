@@ -178,3 +178,67 @@ class IncidentSimulationResponse(BaseModel):
 class ErrorResponse(BaseModel):
     detail: str
     trace_id: str
+
+
+# ------------------------------------------------------------------------------
+# GitHub Live Auth, Repository Browser & Direct Review Schemas (TASK-13)
+# ------------------------------------------------------------------------------
+class GitHubAuthRequest(BaseModel):
+    github_token: Optional[str] = Field(default=None, description="GitHub Personal Access Token (ghp_... or github_pat_...)")
+    github_username: Optional[str] = Field(default=None, description="GitHub username to inspect public repos & PRs")
+
+
+class GitHubRepoItem(BaseModel):
+    full_name: str
+    name: str
+    private: bool = False
+    open_issues_count: int = 0
+    default_branch: str = "main"
+    html_url: str = ""
+    description: Optional[str] = ""
+
+
+class GitHubAuthResponse(BaseModel):
+    authenticated: bool = True
+    auth_mode: str = "public_user"  # "pat" | "public_user" | "fallback"
+    username: str
+    name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    repos: List[GitHubRepoItem] = Field(default_factory=list)
+
+
+class GitHubPullItem(BaseModel):
+    number: int
+    title: str
+    state: str = "open"
+    author: str
+    head_ref: str = "main"
+    updated_at: Optional[str] = None
+    html_url: Optional[str] = None
+
+
+class GitHubRepoPullsResponse(BaseModel):
+    owner: str
+    repo: str
+    has_open_prs: bool = True
+    pulls: List[GitHubPullItem] = Field(default_factory=list)
+
+
+class GitHubImportActivityRequest(BaseModel):
+    pull_number: Optional[int] = None
+    github_token: Optional[str] = None
+
+
+class GitHubPublishReviewRequest(BaseModel):
+    github_token: Optional[str] = None
+    event: str = Field(default="COMMENT", description="COMMENT, APPROVE, or REQUEST_CHANGES")
+
+
+class GitHubPublishReviewResponse(BaseModel):
+    status: str = "preview_generated"  # "published" | "preview_generated"
+    pr_id: str
+    review_id: Optional[str] = None
+    review_url: Optional[str] = None
+    markdown_body: str
+    cli_command: str
+

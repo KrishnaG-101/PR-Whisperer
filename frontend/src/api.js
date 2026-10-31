@@ -99,3 +99,53 @@ export async function triggerIncidentAndRespond(payload = {}) {
   }
   return res.json();
 }
+
+export async function connectGitHub(payload = {}) {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/github/connect`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `GitHub connection failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchRepoPulls(owner, repo, token = null) {
+  const headers = {};
+  if (token) headers["X-GitHub-Token"] = token;
+  const res = await fetch(`${BASE_URL}/api/v1/github/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`, {
+    headers,
+  });
+  if (!res.ok) throw new Error(`Failed to fetch pulls for ${owner}/${repo}: ${res.status}`);
+  return res.json();
+}
+
+export async function importRepoActivity(owner, repo, payload = {}) {
+  const res = await fetch(`${BASE_URL}/api/v1/github/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/import-activity`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to import activity: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function publishGitHubReview(prId, payload = {}) {
+  const res = await fetch(`${BASE_URL}/api/v1/prs/${encodeURIComponent(prId)}/publish-github-review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to publish review: ${res.status}`);
+  }
+  return res.json();
+}
+

@@ -201,6 +201,131 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
+  /api/v1/auth/github/connect:
+    post:
+      summary: Connect GitHub Account (PAT or Public Username)
+      description: >
+        Authenticates a user via GitHub Personal Access Token or inspects public repositories
+        by username with a deterministic offline fallback.
+      operationId: connectGitHubAccount
+      tags:
+        - GitHub Integration
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitHubAuthRequest'
+      responses:
+        '200':
+          description: GitHub account connected or fallback profile generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitHubAuthResponse'
+
+  /api/v1/github/repos/{owner}/{repo}/pulls:
+    get:
+      summary: List Pull Requests for a Repository
+      description: >
+        Fetches live pull requests from GitHub for a specific repository with deterministic fallback.
+      operationId: listGitHubRepoPulls
+      tags:
+        - GitHub Integration
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "KrishnaG-101"
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "PR-Whisperer"
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "all"
+            example: "all"
+      responses:
+        '200':
+          description: List of pull requests returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitHubRepoPullsResponse'
+
+  /api/v1/github/repos/{owner}/{repo}/import-activity:
+    post:
+      summary: Import PR or Latest Commit Diff from Repository
+      description: >
+        Imports a specific pull request or the latest commit diff from a GitHub repository
+        into the PR-Whisperer review queue.
+      operationId: importGitHubRepoActivity
+      tags:
+        - GitHub Integration
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "KrishnaG-101"
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "PR-Whisperer"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitHubImportActivityRequest'
+      responses:
+        '201':
+          description: Pull request record created from activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequestDetail'
+
+  /api/v1/prs/{pr_id}/publish-github-review:
+    post:
+      summary: Direct GitHub Review Publishing
+      description: >
+        Publishes the synthesized voice review feedback directly to the GitHub PR review API
+        or formats a ready-to-run GitHub CLI review command.
+      operationId: publishGitHubReview
+      tags:
+        - GitHub Integration
+      parameters:
+        - name: pr_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "PR-101"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitHubPublishReviewRequest'
+      responses:
+        '200':
+          description: Review published or preview generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitHubPublishReviewResponse'
+
   /api/v1/prs/{pr_id}/voice-analyze:
     post:
       summary: Ingest Wispr Flow Voice Review & Scan PR
@@ -353,6 +478,174 @@ components:
         example: "4bf92f3577b34da6a3ce929d0e0e4736"
 
   schemas:
+    GitHubAuthRequest:
+      type: object
+      properties:
+        github_token:
+          type: string
+          nullable: true
+          example: "ghp_1234567890abcdef"
+        github_username:
+          type: string
+          nullable: true
+          example: "KrishnaG-101"
+
+    GitHubRepoItem:
+      type: object
+      required:
+        - full_name
+        - name
+      properties:
+        full_name:
+          type: string
+          example: "KrishnaG-101/PR-Whisperer"
+        name:
+          type: string
+          example: "PR-Whisperer"
+        private:
+          type: boolean
+          example: false
+        open_issues_count:
+          type: integer
+          example: 2
+        default_branch:
+          type: string
+          example: "main"
+        html_url:
+          type: string
+          example: "https://github.com/KrishnaG-101/PR-Whisperer"
+        description:
+          type: string
+          example: "Voice-First AI Code Review"
+
+    GitHubAuthResponse:
+      type: object
+      required:
+        - authenticated
+        - auth_mode
+        - username
+        - repos
+      properties:
+        authenticated:
+          type: boolean
+          example: true
+        auth_mode:
+          type: string
+          enum: [pat, public_user, fallback]
+          example: "public_user"
+        username:
+          type: string
+          example: "KrishnaG-101"
+        name:
+          type: string
+          example: "Krishna Gopal"
+        avatar_url:
+          type: string
+          example: "https://avatars.githubusercontent.com/u/101?v=4"
+        repos:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitHubRepoItem'
+
+    GitHubPullItem:
+      type: object
+      required:
+        - number
+        - title
+        - state
+        - author
+        - head_ref
+      properties:
+        number:
+          type: integer
+          example: 101
+        title:
+          type: string
+          example: "feat(payments): Stripe Webhook"
+        state:
+          type: string
+          example: "open"
+        author:
+          type: string
+          example: "alice"
+        head_ref:
+          type: string
+          example: "feat/stripe-webhook"
+        updated_at:
+          type: string
+        html_url:
+          type: string
+
+    GitHubRepoPullsResponse:
+      type: object
+      required:
+        - owner
+        - repo
+        - has_open_prs
+        - pulls
+      properties:
+        owner:
+          type: string
+          example: "KrishnaG-101"
+        repo:
+          type: string
+          example: "PR-Whisperer"
+        has_open_prs:
+          type: boolean
+          example: true
+        pulls:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitHubPullItem'
+
+    GitHubImportActivityRequest:
+      type: object
+      properties:
+        pull_number:
+          type: integer
+          nullable: true
+          example: 101
+        github_token:
+          type: string
+          nullable: true
+
+    GitHubPublishReviewRequest:
+      type: object
+      properties:
+        github_token:
+          type: string
+          nullable: true
+        event:
+          type: string
+          enum: [COMMENT, APPROVE, REQUEST_CHANGES]
+          default: "COMMENT"
+
+    GitHubPublishReviewResponse:
+      type: object
+      required:
+        - status
+        - pr_id
+        - markdown_body
+        - cli_command
+      properties:
+        status:
+          type: string
+          enum: [published, preview_generated]
+          example: "preview_generated"
+        pr_id:
+          type: string
+          example: "PR-101"
+        review_id:
+          type: string
+          nullable: true
+        review_url:
+          type: string
+          nullable: true
+        markdown_body:
+          type: string
+        cli_command:
+          type: string
+
     GitHubImportRequest:
       type: object
       required:

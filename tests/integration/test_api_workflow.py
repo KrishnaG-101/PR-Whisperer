@@ -218,3 +218,56 @@ def test_prometheus_metrics_endpoint():
     assert response.status_code == 200
     metrics_text = response.text
     assert "pr_whisperer_requests_total" in metrics_text
+
+
+def test_github_auth_connect():
+    payload = {"github_username": "KrishnaG-101"}
+    response = client.post("/api/v1/auth/github/connect", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["authenticated"] is True
+    assert data["username"] == "KrishnaG-101"
+    assert isinstance(data["repos"], list)
+    assert len(data["repos"]) >= 1
+
+
+def test_github_repo_pulls_and_import_activity():
+    # Test pulls endpoint with fallback
+    response = client.get("/api/v1/github/repos/KrishnaG-101/PR-Whisperer/pulls")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["repo"] == "PR-Whisperer"
+    assert data["owner"] == "KrishnaG-101"
+    assert isinstance(data["pulls"], list)
+
+    # Test import activity endpoint (commit fallback diff)
+    import_resp = client.post(
+        "/api/v1/github/repos/KrishnaG-101/PR-Whisperer/import-activity",
+        json={"pull_number": None}
+    )
+    assert import_resp.status_code in (200, 201)
+    imported_pr = import_resp.json()
+    assert imported_pr["id"].startswith("PR-")
+    assert imported_pr["repo_name"] == "KrishnaG-101/PR-Whisperer"
+    assert len(imported_pr["diff_text"]) > 20
+
+
+def test_publish_github_review_preview_and_command():
+    # Ensure PR-101 has an analyzed session first
+    client.post(
+        "/api/v1/prs/PR-101/voice-analyze",
+        json={"spoken_transcript": "Security check: line 14 has a raw Stripe key"}
+    )
+    
+    # Trigger publish review endpoint without PAT (generates preview & CLI command)
+    pub_resp = client.post(
+        "/api/v1/prs/PR-101/publish-github-review",
+        json={"event": "COMMENT", "github_token": None}
+    )
+    assert pub_resp.status_code == 200
+    result = pub_resp.json()
+    assert result["pr_id"] == "PR-101"
+    assert result["status"] == "preview_generated"
+    assert "gh pr review" in result["cli_command"]
+    assert len(result["markdown_body"]) > 10
+

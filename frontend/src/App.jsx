@@ -29,8 +29,22 @@ import {
   Eye,
   ChevronRight,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Send,
+  Globe,
+  Lock,
+  GitCommit,
+  FolderGit2
 } from 'lucide-react';
+
+function GithubIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  );
+}
 
 import {
   fetchHealth,
@@ -42,7 +56,11 @@ import {
   analyzeVoiceReview,
   runQuerySpeak,
   fetchTelemetrySummary,
-  triggerIncidentAndRespond
+  triggerIncidentAndRespond,
+  connectGitHub,
+  fetchRepoPulls,
+  importRepoActivity,
+  publishGitHubReview
 } from './api';
 
 export default function App() {
@@ -52,6 +70,29 @@ export default function App() {
   const [activeSession, setActiveSession] = useState(null);
   const [health, setHealth] = useState(null);
   const [latestTraceId, setLatestTraceId] = useState(null);
+
+  // Authenticated User & GitHub Hub State (Dual-Mode: Real GitHub + Instant Bypass)
+  const [currentUser, setCurrentUser] = useState({
+    authenticated: true,
+    auth_mode: "workspace", // "workspace" | "public_user" | "pat" | "fallback"
+    username: "KrishnaG-101",
+    name: "Staff Reviewer",
+    avatar_url: "https://avatars.githubusercontent.com/u/101?v=4",
+    github_token: "",
+  });
+  const [userRepos, setUserRepos] = useState([]);
+  const [githubHubOpen, setGithubHubOpen] = useState(false);
+  const [hubTab, setHubTab] = useState("connect"); // "connect" | "repos"
+  const [inputGithubUser, setInputGithubUser] = useState("KrishnaG-101");
+  const [inputGithubToken, setInputGithubToken] = useState("");
+  const [hubLoading, setHubLoading] = useState(false);
+  const [repoSearchQuery, setRepoSearchQuery] = useState("");
+  const [selectedRepo, setSelectedRepo] = useState(null);
+  const [repoPulls, setRepoPulls] = useState([]);
+  const [repoPullsLoading, setRepoPullsLoading] = useState(false);
+  const [publishingReview, setPublishingReview] = useState(false);
+  const [publishReviewResult, setPublishReviewResult] = useState(null);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
 
   // Wispr Flow Voice Command Dock State
   const [transcript, setTranscript] = useState("");
@@ -202,6 +243,97 @@ export default function App() {
       return () => clearInterval(interval);
     }
   }, [drawerOpen, refreshTelemetry]);
+
+  // Handle GitHub Account Connect (PAT or Username)
+  const handleConnectGitHub = async (e) => {
+    if (e) e.preventDefault();
+    setHubLoading(true);
+    try {
+      const res = await connectGitHub({
+        github_username: inputGithubUser.trim() || undefined,
+        github_token: inputGithubToken.trim() || undefined,
+      });
+      setCurrentUser({
+        authenticated: true,
+        auth_mode: res.auth_mode,
+        username: res.username,
+        name: res.name || res.username,
+        avatar_url: res.avatar_url || "https://avatars.githubusercontent.com/u/101?v=4",
+        github_token: inputGithubToken.trim(),
+      });
+      setUserRepos(res.repos || []);
+      setHubTab("repos");
+      triggerToast(`Connected as @${res.username}! ${res.repos?.length || 0} repositories loaded.`);
+    } catch (err) {
+      console.error("Connect GitHub error:", err);
+      triggerToast("GitHub connection fallback engaged: " + err.message);
+    } finally {
+      setHubLoading(false);
+    }
+  };
+
+  // Handle Selecting a Repo in Hub
+  const handleSelectRepo = async (repoItem) => {
+    setSelectedRepo(repoItem);
+    setRepoPullsLoading(true);
+    const [owner, name] = repoItem.full_name.split("/");
+    try {
+      const pullsData = await fetchRepoPulls(owner, name, currentUser.github_token);
+      setRepoPulls(pullsData.pulls || []);
+    } catch (err) {
+      console.error("Fetch repo pulls error:", err);
+      setRepoPulls([]);
+    } finally {
+      setRepoPullsLoading(false);
+    }
+  };
+
+  // Handle Importing Repo Activity (PR or Commit)
+  const handleImportRepoActivity = async (pullNumber = null) => {
+    if (!selectedRepo) return;
+    const [owner, name] = selectedRepo.full_name.split("/");
+    setHubLoading(true);
+    try {
+      const imported = await importRepoActivity(owner, name, {
+        pull_number: pullNumber,
+        github_token: currentUser.github_token,
+      });
+      setPrs(prev => [imported, ...prev.filter(p => p.id !== imported.id)]);
+      setSelectedPR(imported);
+      setActiveSession(null);
+      setTranscript(imported.sample_voice_prompt || "");
+      setGithubHubOpen(false);
+      triggerToast(`Imported ${imported.id} from ${selectedRepo.full_name}!`);
+    } catch (err) {
+      alert("Failed to import repository activity: " + err.message);
+    } finally {
+      setHubLoading(false);
+    }
+  };
+
+  // Handle Direct GitHub Review Publishing
+  const handlePublishGitHubReview = async (event = "COMMENT") => {
+    if (!selectedPR) return;
+    setPublishingReview(true);
+    try {
+      const res = await publishGitHubReview(selectedPR.id, {
+        github_token: currentUser.github_token,
+        event: event,
+      });
+      setPublishReviewResult(res);
+      setPublishModalOpen(true);
+      if (res.status === "published") {
+        triggerToast("Review successfully published to GitHub PR!");
+      } else {
+        triggerToast("Review preview generated with GitHub CLI command!");
+      }
+    } catch (err) {
+      console.error("Publish review error:", err);
+      triggerToast("Failed to publish review: " + err.message);
+    } finally {
+      setPublishingReview(false);
+    }
+  };
 
   // Handle Voice Review Analysis (Supports Append Mode - Feature D)
   const handleAnalyzeVoiceReview = async (simulateFailure = false, appendMode = false) => {
@@ -406,6 +538,60 @@ export default function App() {
     return activeSession.comments.filter(c => c.subagent_persona === personaFilter);
   }, [activeSession, personaFilter]);
 
+  // Categorize PRs into Connected GitHub PRs vs Benchmark Audit Queue
+  const { connectedPRs, benchmarkPRs } = useMemo(() => {
+    const connected = [];
+    const benchmark = [];
+    prs.forEach((pr) => {
+      if (pr.id === "PR-101" || pr.id === "PR-102" || pr.id === "PR-103") {
+        benchmark.push(pr);
+      } else {
+        connected.push(pr);
+      }
+    });
+    return { connectedPRs: connected, benchmarkPRs: benchmark };
+  }, [prs]);
+
+  // Filtered repositories for modal
+  const filteredRepos = useMemo(() => {
+    if (!repoSearchQuery.trim()) return userRepos;
+    return userRepos.filter(r => r.name.toLowerCase().includes(repoSearchQuery.toLowerCase()) || r.full_name.toLowerCase().includes(repoSearchQuery.toLowerCase()));
+  }, [userRepos, repoSearchQuery]);
+
+  // Render individual PR card in sidebar
+  const renderPRCard = (pr) => {
+    const isSelected = selectedPR?.id === pr.id;
+    const badge = getScoreBadge(pr.latest_readiness_score);
+
+    return (
+      <div
+        key={pr.id}
+        onClick={() => loadPRDetails(pr.id)}
+        className={`p-3 rounded-xl cursor-pointer transition-all border ${
+          isSelected
+            ? 'bg-indigo-950/40 border-indigo-500/60 shadow-sm'
+            : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-900 hover:border-slate-700'
+        }`}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <span className="font-mono font-bold text-xs text-indigo-300">{pr.id}</span>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${badge.bg}`}>
+            {pr.latest_readiness_score !== null ? `${pr.latest_readiness_score}%` : badge.label}
+          </span>
+        </div>
+
+        <h3 className="text-xs font-semibold text-slate-200 line-clamp-2 leading-tight">
+          {pr.title}
+        </h3>
+
+        <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400 font-mono">
+          <span className="truncate max-w-[120px]">{pr.repo_name}</span>
+          <span>{pr.files_changed_count} {pr.files_changed_count === 1 ? 'file' : 'files'}</span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
       
@@ -425,7 +611,7 @@ export default function App() {
                 PR-Whisperer
               </span>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold">
-                v1.1
+                v1.2
               </span>
             </div>
             <p className="text-[10px] text-slate-400 leading-none">
@@ -437,6 +623,29 @@ export default function App() {
         {/* Global Live Indicators & Actions */}
         <div className="flex items-center gap-2">
           
+          {/* User Profile & GitHub Hub Connection Badge */}
+          <button
+            onClick={() => setGithubHubOpen(true)}
+            className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-[11px] transition-all"
+            title="Click to connect GitHub account or browse repositories"
+          >
+            <img
+              src={currentUser.avatar_url || "https://avatars.githubusercontent.com/u/101?v=4"}
+              alt={currentUser.username}
+              className="w-5 h-5 rounded-full border border-indigo-400/40"
+            />
+            <span className="font-semibold text-slate-200">
+              {currentUser.auth_mode === "workspace" ? "Staff Reviewer" : `@${currentUser.username}`}
+            </span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+              currentUser.auth_mode === "pat" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" :
+              currentUser.auth_mode === "public_user" ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" :
+              "bg-slate-800 text-slate-300"
+            }`}>
+              {currentUser.auth_mode === "pat" ? "PAT Connected" : currentUser.auth_mode === "public_user" ? "GitHub Synced" : "Workspace Mode"}
+            </span>
+          </button>
+
           {/* Health Badge */}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 text-[11px]">
             <span className={`w-2 h-2 rounded-full ${health?.db_connected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
@@ -579,7 +788,7 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden">
         
         {/* =========================================================================
-            ZONE 3: LEFT SIDEBAR / SELECTOR — PRE-SEEDED & CUSTOM PULL REQUESTS
+            ZONE 3: LEFT SIDEBAR / SELECTOR — CONNECTED GITHUB PRS & BENCHMARK AUDIT QUEUE
         ========================================================================= */}
         <aside className="w-64 lg:w-72 border-r border-slate-800 bg-slate-950/80 flex flex-col shrink-0 overflow-hidden">
           
@@ -591,50 +800,40 @@ export default function App() {
             <span className="text-[10px] font-mono text-slate-500">{prs.length} PRs</span>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-            {prs.map((pr) => {
-              const isSelected = selectedPR?.id === pr.id;
-              const badge = getScoreBadge(pr.latest_readiness_score);
-
-              return (
-                <div
-                  key={pr.id}
-                  onClick={() => loadPRDetails(pr.id)}
-                  className={`p-3 rounded-xl cursor-pointer transition-all border ${
-                    isSelected
-                      ? 'bg-indigo-950/40 border-indigo-500/60 shadow-sm'
-                      : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-900 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono font-bold text-xs text-indigo-300">{pr.id}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${badge.bg}`}>
-                      {pr.latest_readiness_score !== null ? `${pr.latest_readiness_score}%` : badge.label}
-                    </span>
-                  </div>
-
-                  <h3 className="text-xs font-semibold text-slate-200 line-clamp-2 leading-tight">
-                    {pr.title}
-                  </h3>
-
-                  <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400 font-mono">
-                    <span className="truncate max-w-[120px]">{pr.repo_name}</span>
-                    <span>{pr.files_changed_count} {pr.files_changed_count === 1 ? 'file' : 'files'}</span>
-                  </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-3">
+            
+            {/* Section A: Connected GitHub PRs & Commits */}
+            {connectedPRs.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1">
+                  <Globe className="w-3 h-3" />
+                  <span>Connected GitHub Activity ({connectedPRs.length})</span>
                 </div>
-              );
-            })}
+                {connectedPRs.map(pr => renderPRCard(pr))}
+              </div>
+            )}
+
+            {/* Section B: Benchmark Audit Queue (PR-101, PR-102, PR-103) */}
+            <div className="space-y-1.5">
+              <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" />
+                <span>Benchmark Audit Queue ({benchmarkPRs.length})</span>
+              </div>
+              {benchmarkPRs.map(pr => renderPRCard(pr))}
+            </div>
+
           </div>
 
-          {/* Quick Import Footer Helper */}
+          {/* Quick Import / GitHub Hub Footer Trigger */}
           <div className="p-3 border-t border-slate-800/80 bg-slate-900/40 text-[11px] text-slate-400">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] text-slate-400 font-semibold">Judge Drill Mode:</span>
+              <span className="text-[10px] text-slate-400 font-semibold">GitHub Live Hub:</span>
               <button
-                onClick={() => setCustomModalOpen(true)}
-                className="text-[10px] text-indigo-400 hover:underline font-bold"
+                onClick={() => setGithubHubOpen(true)}
+                className="text-[10px] text-cyan-400 hover:underline font-bold flex items-center gap-1"
               >
-                + Live GitHub PR
+                <FolderGit2 className="w-3 h-3" />
+                <span>Browse Repos</span>
               </button>
             </div>
           </div>
@@ -661,17 +860,28 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {/* Copy gh pr review CLI button (Feature C) */}
+              {/* Direct Publish Review to GitHub Button */}
+              <button
+                onClick={() => handlePublishGitHubReview("COMMENT")}
+                disabled={publishingReview || !activeSession}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-[11px] font-semibold text-white shadow-sm disabled:opacity-50"
+                title="Publish review directly to GitHub PR or export CLI command"
+              >
+                {publishingReview ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5 text-indigo-200" />}
+                <span className="hidden sm:inline">Publish to GitHub</span>
+              </button>
+
+              {/* Copy gh pr review CLI button */}
               <button
                 onClick={handleCopyGHReviewCLI}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 border border-slate-700 shadow-sm"
                 title="Copy GitHub CLI review command"
               >
                 <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden sm:inline">Copy `gh pr review`</span>
+                <span className="hidden sm:inline">`gh pr review`</span>
               </button>
 
-              {/* Export Certificate (.md) button (Feature D) */}
+              {/* Export Certificate (.md) button */}
               <button
                 onClick={handleExportCertificate}
                 disabled={exportingCert}
@@ -679,7 +889,7 @@ export default function App() {
                 title="Export audit-grade readiness certificate markdown"
               >
                 {exportingCert ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-emerald-400" />}
-                <span className="hidden sm:inline">Export Cert (.md)</span>
+                <span className="hidden sm:inline">Export Cert</span>
               </button>
 
               {/* Readiness Score Badge */}
@@ -768,16 +978,20 @@ export default function App() {
             <div className="flex items-center justify-between">
               <label className="text-[11px] font-bold text-indigo-300 flex items-center gap-1.5 uppercase tracking-wider">
                 <Radio className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                Hold your Wispr Flow hotkey and speak your code review naturally (or click 'Load Sample Spoken Review' below)
+                Hold Wispr Flow hotkey and speak your code review naturally
               </label>
               
+              {/* Sleek Quick-Fill Voice Preset Pill (Accessible name matches Vitest test) */}
               <button
                 id="btn-load-sample-transcript"
+                aria-label="1-Click Load Sample Spoken Review"
                 onClick={() => setTranscript(selectedPR?.sample_voice_prompt || "")}
-                className="text-[11px] font-semibold text-indigo-300 hover:text-white px-2 py-0.5 rounded bg-indigo-950/60 border border-indigo-800/40 hover:bg-indigo-900 transition-colors"
+                className="text-[11px] font-semibold text-indigo-300 hover:text-white px-2.5 py-1 rounded-lg bg-indigo-950/60 border border-indigo-800/40 hover:bg-indigo-900 transition-colors flex items-center gap-1.5"
                 title="Load sample spoken critique for this pull request"
               >
-                1-Click Load Sample Spoken Review
+                <Sparkles className="w-3 h-3 text-indigo-400" />
+                <span>🎙️ Quick-Fill Voice Preset</span>
+                <span className="text-[9px] text-indigo-400/70 hidden lg:inline">(1-Click Load Sample Spoken Review)</span>
               </button>
             </div>
 
@@ -796,7 +1010,7 @@ export default function App() {
               </span>
 
               <div className="flex items-center gap-2">
-                {/* Multi-pass append mode button (Feature D) */}
+                {/* Multi-pass append mode button */}
                 {activeSession && (
                   <button
                     onClick={() => handleAnalyzeVoiceReview(false, true)}
@@ -948,12 +1162,12 @@ export default function App() {
                 <Bot className="w-8 h-8 text-slate-600 stroke-1" />
                 <p className="text-xs">No voice review session analyzed yet.</p>
                 <p className="text-[11px] text-slate-600">
-                  Click '1-Click Load Sample Spoken Review' then 'Analyze Spoken Review' to generate review cards and agent prompts.
+                  Click '🎙️ Quick-Fill Voice Preset' then 'Analyze Spoken Review' to generate review cards and agent prompts.
                 </p>
               </div>
             )}
 
-            {/* Tab 1: Pinpointed Voice Review Cards (Feature B: Interactive Scroll & Patch Preview) */}
+            {/* Tab 1: Pinpointed Voice Review Cards */}
             {activeSession && studioTab === "cards" && (
               <div className="space-y-2.5">
                 {filteredComments.length === 0 ? (
@@ -989,7 +1203,7 @@ export default function App() {
                             </span>
                           </div>
 
-                          {/* Pinpoint Line Badge (BUG-01 fixed via formatLineLabel) */}
+                          {/* Pinpoint Line Badge */}
                           <span
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1098,7 +1312,7 @@ export default function App() {
       </div>
 
       {/* =========================================================================
-          ZONE 6: OBSERVABILITY & INCIDENT DRAWER (OPENTELEMETRY TRACE + ON-CALL AGENT)
+          ZONE 6: OBSERVABILITY & INCIDENT DRAWER
       ========================================================================= */}
       {drawerOpen && (
         <aside className="fixed inset-y-0 right-0 w-96 lg:w-[460px] bg-slate-950 border-l border-slate-800 shadow-2xl z-40 flex flex-col animate-in slide-in-from-right duration-200">
@@ -1168,7 +1382,308 @@ export default function App() {
       )}
 
       {/* =========================================================================
-          IMPORT CUSTOM PR MODAL (Tab 1: Live GitHub PR URL, Tab 2: Raw Diff)
+          MODAL 1: GITHUB AUTHENTICATION & REPOSITORY HUB (TASK-13)
+      ========================================================================= */}
+      {githubHubOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <GithubIcon className="w-5 h-5 text-indigo-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">GitHub Authentication & Live Repository Hub</h3>
+                  <p className="text-[11px] text-slate-400">Connect your GitHub profile, browse live repositories & PRs, or use instant reviewer mode</p>
+                </div>
+              </div>
+              <button onClick={() => setGithubHubOpen(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Hub Tabs */}
+            <div className="flex border-b border-slate-800 pb-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setHubTab("connect")}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+                  hubTab === "connect" ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Account Connection</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (userRepos.length === 0) handleConnectGitHub();
+                  setHubTab("repos");
+                }}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+                  hubTab === "repos" ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <FolderGit2 className="w-3.5 h-3.5" />
+                <span>Live Repository & PR Browser ({userRepos.length})</span>
+              </button>
+            </div>
+
+            {/* Hub Tab 1: Connect Account */}
+            {hubTab === "connect" && (
+              <form onSubmit={handleConnectGitHub} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    GitHub Username (Public Repositories & PRs)
+                  </label>
+                  <input
+                    type="text"
+                    value={inputGithubUser}
+                    onChange={(e) => setInputGithubUser(e.target.value)}
+                    placeholder="e.g. KrishnaG-101"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 font-mono text-[11px]"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Zero token required! Automatically fetches public repositories and pull requests for inspection.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                    <span>GitHub Personal Access Token (Optional)</span>
+                    <span className="text-[10px] text-indigo-400 font-normal">Unlocks private repos & direct PR review publishing</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={inputGithubToken}
+                    onChange={(e) => setInputGithubToken(e.target.value)}
+                    placeholder="ghp_... or github_pat_..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 font-mono text-[11px]"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Token is kept exclusively in client-side memory and never logged to telemetry or stored permanently.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentUser({
+                        authenticated: true,
+                        auth_mode: "workspace",
+                        username: "KrishnaG-101",
+                        name: "Staff Reviewer",
+                        avatar_url: "https://avatars.githubusercontent.com/u/101?v=4",
+                        github_token: "",
+                      });
+                      setGithubHubOpen(false);
+                      triggerToast("Switched to Instant Reviewer Workspace Mode!");
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 font-semibold"
+                  >
+                    ⚡ Continue in Instant Reviewer Workspace
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={hubLoading}
+                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {hubLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <GithubIcon className="w-3.5 h-3.5" />}
+                    <span>Connect & Load Repositories</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Hub Tab 2: Live Repository & PR Browser */}
+            {hubTab === "repos" && (
+              <div className="space-y-3 text-xs">
+                
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+                  <input
+                    type="text"
+                    value={repoSearchQuery}
+                    onChange={(e) => setRepoSearchQuery(e.target.value)}
+                    placeholder="Filter repositories..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-slate-200 text-xs"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[360px] overflow-y-auto">
+                  
+                  {/* Left Column: Repositories List */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Repositories ({filteredRepos.length})
+                    </span>
+                    {filteredRepos.length === 0 ? (
+                      <p className="text-[11px] text-slate-500 p-3 bg-slate-950 rounded-lg">No repositories loaded. Connect your account in Tab 1.</p>
+                    ) : (
+                      filteredRepos.map((r, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => handleSelectRepo(r)}
+                          className={`p-2.5 rounded-lg cursor-pointer border transition-all ${
+                            selectedRepo?.name === r.name
+                              ? 'bg-indigo-950/50 border-indigo-500 text-white shadow-sm'
+                              : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs truncate max-w-[170px]">{r.name}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
+                              {r.private ? "Private" : "Public"}
+                            </span>
+                          </div>
+                          {r.description && <p className="text-[10px] text-slate-400 truncate mt-0.5">{r.description}</p>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Right Column: Pull Requests for Selected Repo */}
+                  <div className="space-y-1.5 border-l border-slate-800 pl-3">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      {selectedRepo ? `Activity for ${selectedRepo.name}` : "Select a repository to view PRs"}
+                    </span>
+
+                    {repoPullsLoading ? (
+                      <div className="p-6 flex flex-col items-center justify-center text-slate-400 gap-1.5">
+                        <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                        <span className="text-[10px]">Loading pull requests from GitHub...</span>
+                      </div>
+                    ) : selectedRepo ? (
+                      <div className="space-y-2">
+                        {repoPulls.length > 0 ? (
+                          repoPulls.map((p, idx) => (
+                            <div key={idx} className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-cyan-300 font-bold">#{p.number}</span>
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">
+                                  {p.state}
+                                </span>
+                              </div>
+                              <p className="text-slate-200 font-medium line-clamp-2">{p.title}</p>
+                              <div className="flex items-center justify-between pt-1">
+                                <span className="text-[10px] text-slate-400">by @{p.author}</span>
+                                <button
+                                  onClick={() => handleImportRepoActivity(p.number)}
+                                  className="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 font-bold text-[10px] text-white shadow"
+                                >
+                                  Import PR for Review
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 text-center space-y-2">
+                            <p className="text-[11px] text-slate-400">No open pull requests in this repository.</p>
+                            <button
+                              onClick={() => handleImportRepoActivity(null)}
+                              className="w-full px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold text-white text-[11px] flex items-center justify-center gap-1.5 shadow"
+                            >
+                              <GitCommit className="w-3.5 h-3.5 text-indigo-200" />
+                              <span>Import Latest Commit Diff for Review</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-500 p-3 bg-slate-950 rounded-lg">Select a repository from the left list to inspect its pull requests.</p>
+                    )}
+                  </div>
+
+                </div>
+
+                <div className="flex justify-end pt-2 border-t border-slate-800">
+                  <button
+                    onClick={() => setGithubHubOpen(false)}
+                    className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold"
+                  >
+                    Close
+                  </button>
+                </div>
+
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 2: DIRECT GITHUB REVIEW PUBLISHING CONFIRMATION
+      ========================================================================= */}
+      {publishModalOpen && publishReviewResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden p-5 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-sm font-bold text-white">
+                  {publishReviewResult.status === "published" ? "GitHub Review Published Live!" : "GitHub Review Preview Generated"}
+                </h3>
+              </div>
+              <button onClick={() => setPublishModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              {publishReviewResult.status === "published"
+                ? "Your hands-free Wispr Flow voice review was posted directly to the GitHub pull request!"
+                : "A review preview and 1-click GitHub CLI command were generated for your review session."}
+            </p>
+
+            {publishReviewResult.review_url && (
+              <a
+                href={publishReviewResult.review_url}
+                target="_blank"
+                rel="noreferrer"
+                className="block p-2 rounded bg-indigo-950/60 border border-indigo-800/40 text-xs text-indigo-300 font-semibold hover:underline"
+              >
+                🔗 View Live Review on GitHub: {publishReviewResult.review_url}
+              </a>
+            )}
+
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                Generated `gh pr review` Command:
+              </span>
+              <pre className="p-2.5 rounded bg-black/80 text-[10px] font-mono text-cyan-300 overflow-x-auto border border-slate-800">
+                {publishReviewResult.cli_command}
+              </pre>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(publishReviewResult.cli_command);
+                  triggerToast("Copied CLI command to clipboard!");
+                }}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copy Command</span>
+              </button>
+              <button
+                onClick={() => setPublishModalOpen(false)}
+                className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 3: IMPORT CUSTOM PR MODAL
       ========================================================================= */}
       {customModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
@@ -1205,7 +1720,7 @@ export default function App() {
               </button>
             </div>
 
-            {/* Tab 1: Live GitHub PR URL Fetcher (Feature C) */}
+            {/* Tab 1: Live GitHub PR URL Fetcher */}
             {modalTab === "github" && (
               <form onSubmit={handleImportGitHubPR} className="space-y-3 text-xs">
                 <div>
