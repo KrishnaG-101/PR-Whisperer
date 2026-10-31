@@ -84,4 +84,19 @@ scratch/
 docs/hackathon-and-rubric-guide.md
 docs/qa-audit-and-feature-roadmap.md
 
+# Video Generation Pipeline & Assets (Local Only)
+*.mp4
+scripts/build_demo_video.py
+scripts/generate_neural_audio.py
+scripts/video_assets/
+
+# Incident Response Subsystem (Local Only)
+incident-response/
+
+# Local Unit Tests (Local Only)
+tests/unit/
+
+
+
+
 

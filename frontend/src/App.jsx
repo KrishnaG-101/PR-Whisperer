@@ -567,25 +567,25 @@ export default function App() {
       <div
         key={pr.id}
         onClick={() => loadPRDetails(pr.id)}
-        className={`p-3 rounded-xl cursor-pointer transition-all border ${
+        className={`p-2.5 rounded-lg cursor-pointer transition-all border ${
           isSelected
-            ? 'bg-indigo-950/40 border-indigo-500/60 shadow-sm'
-            : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-900 hover:border-slate-700'
+            ? 'bg-indigo-600/10 border-indigo-500/50 shadow-sm'
+            : 'bg-slate-900/30 border-slate-800/80 hover:bg-slate-900 hover:border-slate-700'
         }`}
       >
         <div className="flex items-center justify-between mb-1">
           <span className="font-mono font-bold text-xs text-indigo-300">{pr.id}</span>
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${badge.bg}`}>
+          <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${badge.bg}`}>
             {pr.latest_readiness_score !== null ? `${pr.latest_readiness_score}%` : badge.label}
           </span>
         </div>
 
-        <h3 className="text-xs font-semibold text-slate-200 line-clamp-2 leading-tight">
+        <h3 className="text-xs font-medium text-slate-200 line-clamp-2 leading-snug">
           {pr.title}
         </h3>
 
-        <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400 font-mono">
-          <span className="truncate max-w-[120px]">{pr.repo_name}</span>
+        <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-500 font-mono">
+          <span className="truncate max-w-[130px]">{pr.repo_name}</span>
           <span>{pr.files_changed_count} {pr.files_changed_count === 1 ? 'file' : 'files'}</span>
         </div>
       </div>
@@ -596,74 +596,38 @@ export default function App() {
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
       
       {/* =========================================================================
-          ZONE 1: HEADER & STATUS BAR
+          ZONE 1: CLEAN TOP NAVBAR
       ========================================================================= */}
-      <header className="h-14 border-b border-slate-800 bg-slate-900/90 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
+      <header className="h-12 border-b border-slate-800/80 bg-slate-900/80 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
         
-        {/* Brand & Tagline */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 via-purple-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Mic className="w-4 h-4 text-white" />
+        {/* Brand */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm">
+            <Mic className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
-                PR-Whisperer
-              </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold">
-                v1.2
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400 leading-none">
-              Speak Your Code Review. Ship Clean PRs.
-            </p>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm tracking-tight text-white">
+              PR-Whisperer
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-medium">
+              v1.2
+            </span>
           </div>
         </div>
 
         {/* Global Live Indicators & Actions */}
         <div className="flex items-center gap-2">
           
-          {/* User Profile & GitHub Hub Connection Badge */}
-          <button
-            onClick={() => setGithubHubOpen(true)}
-            className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-[11px] transition-all"
-            title="Click to connect GitHub account or browse repositories"
-          >
-            <img
-              src={currentUser.avatar_url || "https://avatars.githubusercontent.com/u/101?v=4"}
-              alt={currentUser.username}
-              className="w-5 h-5 rounded-full border border-indigo-400/40"
-            />
-            <span className="font-semibold text-slate-200">
-              {currentUser.auth_mode === "workspace" ? "Staff Reviewer" : `@${currentUser.username}`}
-            </span>
-            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
-              currentUser.auth_mode === "pat" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" :
-              currentUser.auth_mode === "public_user" ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" :
-              "bg-slate-800 text-slate-300"
-            }`}>
-              {currentUser.auth_mode === "pat" ? "PAT Connected" : currentUser.auth_mode === "public_user" ? "GitHub Synced" : "Workspace Mode"}
-            </span>
-          </button>
-
           {/* Health Badge */}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 text-[11px]">
-            <span className={`w-2 h-2 rounded-full ${health?.db_connected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+            <span className={`w-2 h-2 rounded-full ${health?.db_connected ? 'bg-emerald-400' : 'bg-rose-400'}`} />
             <span className="text-slate-300 font-medium">{health?.db_connected ? 'DB Connected' : 'DB Degraded'}</span>
           </div>
-
-          {/* Trace Correlation Pill */}
-          {latestTraceId && (
-            <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-950/40 border border-indigo-800/40 text-[11px] font-mono text-indigo-300">
-              <span className="text-slate-400">Trace:</span>
-              <span>{latestTraceId.substring(0, 8)}...</span>
-            </div>
-          )}
 
           {/* Import PR Button */}
           <button
             onClick={() => setCustomModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-xs font-medium text-slate-200 border border-slate-700/60 transition-colors shadow-sm"
           >
             <PlusCircle className="w-3.5 h-3.5 text-indigo-400" />
             <span>Import PR</span>
@@ -672,10 +636,10 @@ export default function App() {
           {/* Observability & On-Call Drawer Trigger */}
           <button
             onClick={() => setDrawerOpen(!drawerOpen)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
               health?.active_incidents_count > 0
-                ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 animate-pulse shadow-rose-500/20'
-                : 'bg-slate-800/80 border-slate-700/80 hover:bg-slate-800 text-slate-300'
+                ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 animate-pulse'
+                : 'bg-slate-800/80 border-slate-700/60 hover:bg-slate-800 text-slate-300'
             }`}
           >
             <Activity className="w-3.5 h-3.5 text-cyan-400" />
@@ -686,29 +650,45 @@ export default function App() {
               </span>
             )}
           </button>
+
+          {/* User Profile & GitHub Hub Connection Badge */}
+          <button
+            onClick={() => setGithubHubOpen(true)}
+            className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs transition-all"
+            title="Click to connect GitHub account or browse repositories"
+          >
+            <img
+              src={currentUser.avatar_url || "https://avatars.githubusercontent.com/u/101?v=4"}
+              alt={currentUser.username}
+              className="w-5 h-5 rounded-full border border-indigo-400/40"
+            />
+            <span className="font-medium text-slate-200">
+              {currentUser.auth_mode === "workspace" ? "Staff Reviewer" : `@${currentUser.username}`}
+            </span>
+          </button>
         </div>
       </header>
 
       {/* =========================================================================
-          ZONE 2: QUERYSPEAK NATURAL LANGUAGE CROSS-PR AUDIT BAR
+          ZONE 2: QUERYSPEAK NATURAL LANGUAGE AUDIT BAR
       ========================================================================= */}
-      <div className="bg-slate-900/60 border-b border-slate-800 px-4 py-2 shrink-0">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-2">
+      <div className="bg-slate-900/40 border-b border-slate-800/80 px-4 py-1.5 shrink-0">
+        <div className="flex flex-col md:flex-row items-center gap-2">
           
           <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-indigo-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-indigo-400" />
             <input
               type="text"
               value={querySpeakText}
               onChange={(e) => setQuerySpeakText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleQuerySpeakSubmit()}
               placeholder="QuerySpeak: Ask via Wispr Flow (e.g. 'Show all critical security issues in payment PRs' or 'Find contract drift')"
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-9 pr-24 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/40 font-sans"
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-20 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 font-sans"
             />
             <button
               onClick={() => handleQuerySpeakSubmit()}
               disabled={querySpeakLoading || !querySpeakText.trim()}
-              className="absolute right-1.5 top-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-[11px] font-bold text-white transition-all shadow"
+              className="absolute right-1 top-1 px-2.5 py-0.5 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-[11px] font-semibold text-white transition-all shadow-sm"
             >
               {querySpeakLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Search"}
             </button>
@@ -716,7 +696,6 @@ export default function App() {
 
           {/* Quick Query Chips */}
           <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto text-[11px]">
-            <span className="text-slate-500 text-[10px] uppercase font-bold shrink-0">Quick Queries:</span>
             {[
               "Critical security issues in payments",
               "All OpenAPI contract drift warnings",
@@ -728,7 +707,7 @@ export default function App() {
                   setQuerySpeakText(qChip);
                   handleQuerySpeakSubmit(qChip);
                 }}
-                className="shrink-0 px-2 py-0.5 rounded-full bg-slate-950 border border-slate-800 hover:border-indigo-500/40 text-slate-400 hover:text-indigo-300 transition-colors"
+                className="shrink-0 px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 hover:border-indigo-500/40 text-slate-400 hover:text-indigo-300 text-[11px] transition-colors"
               >
                 {qChip}
               </button>
@@ -790,14 +769,14 @@ export default function App() {
         {/* =========================================================================
             ZONE 3: LEFT SIDEBAR / SELECTOR — CONNECTED GITHUB PRS & BENCHMARK AUDIT QUEUE
         ========================================================================= */}
-        <aside className="w-64 lg:w-72 border-r border-slate-800 bg-slate-950/80 flex flex-col shrink-0 overflow-hidden">
+        <aside className="w-64 lg:w-72 border-r border-slate-800/80 bg-slate-950 flex flex-col shrink-0 overflow-hidden">
           
-          <div className="p-3 border-b border-slate-800 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <div className="p-2.5 border-b border-slate-800/80 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
               <GitPullRequest className="w-3.5 h-3.5 text-indigo-400" />
-              Review Queue
+              <span>Review Queue</span>
             </span>
-            <span className="text-[10px] font-mono text-slate-500">{prs.length} PRs</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-900 text-slate-400">{prs.length} PRs</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-3">
@@ -805,7 +784,7 @@ export default function App() {
             {/* Section A: Connected GitHub PRs & Commits */}
             {connectedPRs.length > 0 && (
               <div className="space-y-1.5">
-                <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1">
+                <div className="px-1 text-[10px] font-semibold text-cyan-400 flex items-center gap-1">
                   <Globe className="w-3 h-3" />
                   <span>Connected GitHub Activity ({connectedPRs.length})</span>
                 </div>
@@ -815,9 +794,9 @@ export default function App() {
 
             {/* Section B: Benchmark Audit Queue (PR-101, PR-102, PR-103) */}
             <div className="space-y-1.5">
-              <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1">
+              <div className="px-1 text-[10px] font-semibold text-indigo-400 flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3" />
-                <span>Benchmark Audit Queue ({benchmarkPRs.length})</span>
+                <span>Benchmark PRs ({benchmarkPRs.length})</span>
               </div>
               {benchmarkPRs.map(pr => renderPRCard(pr))}
             </div>
@@ -825,17 +804,14 @@ export default function App() {
           </div>
 
           {/* Quick Import / GitHub Hub Footer Trigger */}
-          <div className="p-3 border-t border-slate-800/80 bg-slate-900/40 text-[11px] text-slate-400">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-slate-400 font-semibold">GitHub Live Hub:</span>
-              <button
-                onClick={() => setGithubHubOpen(true)}
-                className="text-[10px] text-cyan-400 hover:underline font-bold flex items-center gap-1"
-              >
-                <FolderGit2 className="w-3 h-3" />
-                <span>Browse Repos</span>
-              </button>
-            </div>
+          <div className="p-2.5 border-t border-slate-800/80 bg-slate-900/30 text-xs">
+            <button
+              onClick={() => setGithubHubOpen(true)}
+              className="w-full py-1 text-slate-400 hover:text-cyan-300 font-medium flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <FolderGit2 className="w-3.5 h-3.5 text-slate-500" />
+              <span>Browse Repositories</span>
+            </button>
           </div>
         </aside>
 
@@ -845,7 +821,7 @@ export default function App() {
         <section className="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-hidden">
           
           {/* PR Metadata Banner & Actions */}
-          <div className="p-3 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between shrink-0">
+          <div className="p-3 border-b border-slate-800/80 bg-slate-900/30 flex items-center justify-between shrink-0">
             <div className="min-w-0 flex-1 pr-3">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="font-mono font-bold text-indigo-400 text-xs">{selectedPR?.id || "PR-..."}</span>
@@ -854,53 +830,53 @@ export default function App() {
                 <span className="text-slate-600">•</span>
                 <span className="text-[11px] text-slate-400">by @{selectedPR?.author}</span>
               </div>
-              <h2 className="text-sm font-bold text-white truncate">
+              <h2 className="text-sm font-semibold text-white truncate">
                 {selectedPR?.title || "Select a Pull Request to begin review"}
               </h2>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              {/* Readiness Score Badge */}
+              <div className={`px-2 py-0.5 rounded-md border text-xs font-semibold flex items-center gap-1 ${scoreBadge.bg}`}>
+                <ShieldAlert className="w-3 h-3" />
+                <span>Score: {readinessScore !== null ? `${readinessScore}/100` : "Unreviewed"}</span>
+              </div>
+
               {/* Direct Publish Review to GitHub Button */}
               <button
                 onClick={() => handlePublishGitHubReview("COMMENT")}
                 disabled={publishingReview || !activeSession}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-[11px] font-semibold text-white shadow-sm disabled:opacity-50"
-                title="Publish review directly to GitHub PR or export CLI command"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white shadow-sm disabled:opacity-40 transition-colors"
+                title="Publish review directly to GitHub PR"
               >
                 {publishingReview ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5 text-indigo-200" />}
-                <span className="hidden sm:inline">Publish to GitHub</span>
+                <span>Publish to GitHub</span>
               </button>
 
               {/* Copy gh pr review CLI button */}
               <button
                 onClick={handleCopyGHReviewCLI}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 border border-slate-700 shadow-sm"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700/60 shadow-sm transition-colors"
                 title="Copy GitHub CLI review command"
               >
                 <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden sm:inline">`gh pr review`</span>
+                <span>`gh pr review`</span>
               </button>
 
               {/* Export Certificate (.md) button */}
               <button
                 onClick={handleExportCertificate}
                 disabled={exportingCert}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-700/50 text-[11px] font-semibold text-emerald-300 shadow-sm disabled:opacity-50"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-xs font-medium text-slate-300 shadow-sm disabled:opacity-40 transition-colors"
                 title="Export audit-grade readiness certificate markdown"
               >
                 {exportingCert ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-emerald-400" />}
-                <span className="hidden sm:inline">Export Cert</span>
+                <span>Export Cert</span>
               </button>
-
-              {/* Readiness Score Badge */}
-              <div className={`px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center gap-1.5 ${scoreBadge.bg}`}>
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Score: {readinessScore !== null ? `${readinessScore}/100` : "Unreviewed"}</span>
-              </div>
             </div>
           </div>
 
-          {/* Diff Viewer Code Window (Feature B: Line Pin-Scroll & Pulse Highlight) */}
+          {/* Diff Viewer Code Window */}
           <div ref={diffContainerRef} className="flex-1 overflow-y-auto p-3 font-mono text-xs space-y-0.5 bg-slate-950 select-text">
             {diffLines.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-500 text-xs">
@@ -914,71 +890,55 @@ export default function App() {
                 const isHeader = line.startsWith('@@') || line.startsWith('diff --git');
                 const isHighlighted = highlightedLine === lineNum;
 
-                // Live Deterministic Highlighting
+                // Live Deterministic Highlighting Flag
                 const hasStripeSecret = line.includes('sk_live_');
                 const hasSQLi = line.includes('SELECT') && line.includes('{user_id}');
                 const hasBareExcept = line.trim() === 'pass' || (line.includes('except:') && line.includes('pass'));
                 const hasLoopQuery = line.includes('for ') && line.includes('in ') && line.includes('db.execute');
+                const hasAlert = hasStripeSecret || hasSQLi || hasBareExcept || hasLoopQuery;
 
                 return (
-                  <React.Fragment key={idx}>
-                    <div
-                      id={`diff-line-${lineNum}`}
-                      className={`flex items-start rounded px-1 transition-all ${
-                        isHighlighted
-                          ? 'ring-2 ring-cyan-400 bg-cyan-950/60 shadow-lg'
-                          : isAdd
-                          ? 'bg-emerald-950/20 text-emerald-300 border-l-2 border-emerald-500'
-                          : isDel
-                          ? 'bg-rose-950/20 text-rose-300 border-l-2 border-rose-500'
-                          : isHeader
-                          ? 'bg-indigo-950/40 text-indigo-300 font-bold py-1'
-                          : 'text-slate-300 hover:bg-slate-900/50'
-                      }`}
-                    >
-                      <span className="w-8 select-none text-slate-600 text-right pr-2 text-[10px] shrink-0 font-mono">
-                        {isHeader ? '...' : lineNum}
+                  <div
+                    key={idx}
+                    id={`diff-line-${lineNum}`}
+                    className={`flex items-start rounded px-1 transition-all ${
+                      isHighlighted
+                        ? 'ring-2 ring-cyan-400 bg-cyan-950/60 shadow-lg'
+                        : isAdd
+                        ? 'bg-emerald-950/20 text-emerald-300 border-l-2 border-emerald-500'
+                        : isDel
+                        ? 'bg-rose-950/20 text-rose-300 border-l-2 border-rose-500'
+                        : isHeader
+                        ? 'bg-indigo-950/40 text-indigo-300 font-bold py-1'
+                        : 'text-slate-300 hover:bg-slate-900/50'
+                    }`}
+                  >
+                    <span className="w-8 select-none text-slate-600 text-right pr-2 text-[10px] shrink-0 font-mono">
+                      {isHeader ? '...' : lineNum}
+                    </span>
+                    <span className="w-4 select-none font-bold text-slate-500 shrink-0 text-center">
+                      {isAdd ? '+' : isDel ? '-' : ' '}
+                    </span>
+                    <span className="flex-1 whitespace-pre-wrap break-all">
+                      {line.substring(isAdd || isDel ? 1 : 0)}
+                    </span>
+                    {hasAlert && (
+                      <span className="ml-2 px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
+                        {hasStripeSecret ? 'Secret' : hasSQLi ? 'SQLi' : hasBareExcept ? 'Bare Except' : 'N+1 Query'}
                       </span>
-                      <span className="w-4 select-none font-bold text-slate-500 shrink-0 text-center">
-                        {isAdd ? '+' : isDel ? '-' : ' '}
-                      </span>
-                      <span className="flex-1 whitespace-pre-wrap break-all">
-                        {line.substring(isAdd || isDel ? 1 : 0)}
-                      </span>
-                    </div>
-
-                    {/* Inline Pinned Guardrail Alert Badges */}
-                    {(hasStripeSecret || hasSQLi || hasBareExcept || hasLoopQuery) && (
-                      <div className="bg-slate-900/90 border-y border-rose-500/30 p-2.5 my-1 ml-10 mr-2 rounded-lg space-y-1">
-                        <div className="flex items-center gap-2">
-                          <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                            {hasStripeSecret ? 'RULE-SEC-01: Hardcoded Secret' : hasSQLi ? 'RULE-SEC-02: SQL Injection' : hasBareExcept ? 'RULE-BUG-01: Bare Except' : 'RULE-PERF-01: N+1 Query'}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-sans">
-                            {hasStripeSecret
-                              ? "Live API secret detected in diff chunk. Move credentials to environment variables."
-                              : hasSQLi
-                              ? "Unsanitized f-string parameter interpolation opens SQL injection vulnerability."
-                              : hasBareExcept
-                              ? "Bare except clause silently swallows authentication exceptions."
-                              : "Database fetch inside iteration loop causes latency degradation."}
-                          </span>
-                        </div>
-                      </div>
                     )}
-                  </React.Fragment>
+                  </div>
                 );
               })
             )}
           </div>
 
-          {/* Wispr Flow Voice Command Dock (Auto-Focusable Textarea & Buttons) */}
-          <div className="p-3 bg-slate-900/90 border-t border-slate-800 flex flex-col gap-2 shrink-0">
+          {/* Wispr Flow Voice Command Dock */}
+          <div className="p-3 bg-slate-900/80 border-t border-slate-800/80 flex flex-col gap-2 shrink-0">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold text-indigo-300 flex items-center gap-1.5 uppercase tracking-wider">
-                <Radio className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                Hold Wispr Flow hotkey and speak your code review naturally
+              <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                <Mic className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Wispr Flow Voice Review</span>
               </label>
               
               {/* Sleek Quick-Fill Voice Preset Pill (Accessible name matches Vitest test) */}
@@ -986,12 +946,11 @@ export default function App() {
                 id="btn-load-sample-transcript"
                 aria-label="1-Click Load Sample Spoken Review"
                 onClick={() => setTranscript(selectedPR?.sample_voice_prompt || "")}
-                className="text-[11px] font-semibold text-indigo-300 hover:text-white px-2.5 py-1 rounded-lg bg-indigo-950/60 border border-indigo-800/40 hover:bg-indigo-900 transition-colors flex items-center gap-1.5"
-                title="Load sample spoken critique for this pull request"
+                className="text-xs text-indigo-300 hover:text-white px-2.5 py-0.5 rounded-md bg-indigo-950/50 border border-indigo-800/30 hover:bg-indigo-900/60 transition-colors flex items-center gap-1"
+                title="Load sample review for this PR"
               >
                 <Sparkles className="w-3 h-3 text-indigo-400" />
-                <span>🎙️ Quick-Fill Voice Preset</span>
-                <span className="text-[9px] text-indigo-400/70 hidden lg:inline">(1-Click Load Sample Spoken Review)</span>
+                <span>🎙️ Sample Review</span>
               </button>
             </div>
 
@@ -1001,13 +960,13 @@ export default function App() {
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
               placeholder="Speak with Wispr Flow... (e.g. 'Line 14 in payments.py has a hardcoded Stripe live secret key that must be extracted to env vars, and line 38 has a SQL injection flaw.')"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500/70 resize-none font-sans"
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 resize-none font-sans"
             />
 
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-[10px] text-slate-400">
-                Multi-pass voice critique parsed deterministically into line-pinned review comments.
-              </span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[11px] text-slate-500">
+                Hold your Wispr Flow hotkey to speak hands-free review instructions
+              </div>
 
               <div className="flex items-center gap-2">
                 {/* Multi-pass append mode button */}
@@ -1015,11 +974,11 @@ export default function App() {
                   <button
                     onClick={() => handleAnalyzeVoiceReview(false, true)}
                     disabled={isAnalyzing || !transcript.trim()}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs text-indigo-200 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/50 disabled:opacity-40 transition-all shadow"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-200 bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-700/40 disabled:opacity-40 transition-colors shadow-sm"
                     title="Append spoken note to active review session"
                   >
                     <PlusCircle className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Append Spoken Note</span>
+                    <span>Append Note</span>
                   </button>
                 )}
 
@@ -1028,17 +987,17 @@ export default function App() {
                   id="btn-analyze-spoken-review"
                   onClick={() => handleAnalyzeVoiceReview(false, false)}
                   disabled={isAnalyzing || !transcript.trim()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:brightness-110 shadow-lg shadow-indigo-500/20 disabled:opacity-40 transition-all"
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm disabled:opacity-40 transition-colors"
                 >
                   {isAnalyzing ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Analyzing Review...</span>
+                      <span>Analyzing...</span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>Analyze Spoken Review (Gemini + Guardrails)</span>
+                      <span>Analyze Spoken Review</span>
                     </>
                   )}
                 </button>
@@ -1051,65 +1010,65 @@ export default function App() {
         {/* =========================================================================
             ZONE 5: RIGHT PANE — REVIEW STUDIO, VELOCITY HUD & AGENT PROMPT
         ========================================================================= */}
-        <section className="w-80 lg:w-96 border-l border-slate-800 bg-slate-950/90 flex flex-col shrink-0 overflow-hidden">
+        <section className="w-80 lg:w-96 border-l border-slate-800/80 bg-slate-950 flex flex-col shrink-0 overflow-hidden">
           
           {/* Feature A: Wispr Flow "Voice Velocity & Ergonomics HUD" */}
           {activeSession && (
-            <div className="p-3 border-b border-indigo-500/30 bg-gradient-to-r from-indigo-950/50 via-slate-900/60 to-cyan-950/40 space-y-2">
+            <div className="p-3 border-b border-slate-800/80 bg-slate-900/30 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                   <Zap className="w-3 h-3 text-cyan-400" />
-                  Voice Velocity & Ergonomics HUD
+                  Voice Velocity
                 </span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   activeSession.review_verdict === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
                   activeSession.review_verdict === 'CHANGES_REQUESTED' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' :
                   'bg-amber-500/20 text-amber-300 border-amber-500/40'
                 }`}>
-                  Verdict: {activeSession.review_verdict || "CHANGES_REQUESTED"}
+                  {activeSession.review_verdict || "CHANGES_REQUESTED"}
                 </span>
               </div>
 
               <div className="grid grid-cols-4 gap-1.5 text-center">
-                <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800">
-                  <span className="block text-[12px] font-bold text-white font-mono">{activeSession.word_count || 48}</span>
-                  <span className="block text-[9px] text-slate-400 leading-tight">Words</span>
+                <div className="p-1.5 rounded-md bg-slate-900/80 border border-slate-800">
+                  <span className="block text-xs font-bold text-white font-mono">{activeSession.word_count || 48}</span>
+                  <span className="block text-[9px] text-slate-500">Words</span>
                 </div>
-                <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800">
-                  <span className="block text-[12px] font-bold text-cyan-300 font-mono">~{activeSession.estimated_speaking_seconds || 19.2}s</span>
-                  <span className="block text-[9px] text-slate-400 leading-tight">Spoken</span>
+                <div className="p-1.5 rounded-md bg-slate-900/80 border border-slate-800">
+                  <span className="block text-xs font-bold text-cyan-300 font-mono">~{activeSession.estimated_speaking_seconds || 19.2}s</span>
+                  <span className="block text-[9px] text-slate-500">Spoken</span>
                 </div>
-                <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800">
-                  <span className="block text-[12px] font-bold text-emerald-300 font-mono">~{activeSession.estimated_typing_seconds_saved || 82}s</span>
-                  <span className="block text-[9px] text-slate-400 leading-tight">Typing Saved</span>
+                <div className="p-1.5 rounded-md bg-slate-900/80 border border-slate-800">
+                  <span className="block text-xs font-bold text-emerald-300 font-mono">~{activeSession.estimated_typing_seconds_saved || 82}s</span>
+                  <span className="block text-[9px] text-slate-500">Saved</span>
                 </div>
-                <div className="p-1.5 rounded bg-slate-950/80 border border-slate-800">
-                  <span className="block text-[12px] font-bold text-purple-300 font-mono">{activeSession.speedup_multiplier || 4.3}x</span>
-                  <span className="block text-[9px] text-slate-400 leading-tight">Velocity Gain</span>
+                <div className="p-1.5 rounded-md bg-slate-900/80 border border-slate-800">
+                  <span className="block text-xs font-bold text-purple-300 font-mono">{activeSession.speedup_multiplier || 4.3}x</span>
+                  <span className="block text-[9px] text-slate-500">Speedup</span>
                 </div>
               </div>
             </div>
           )}
 
           {/* Tab Navigation */}
-          <div className="flex border-b border-slate-800 bg-slate-900/60 p-1 gap-1 shrink-0">
+          <div className="flex border-b border-slate-800/80 bg-slate-900/20 p-1 gap-1 shrink-0">
             <button
               onClick={() => setStudioTab("cards")}
-              className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+              className={`flex-1 py-1 text-xs font-medium rounded-md transition-all ${
                 studioTab === "cards"
-                  ? 'bg-indigo-600 text-white shadow'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Review Cards ({activeSession?.comments?.length || 0})
+              Comments ({activeSession?.comments?.length || 0})
             </button>
 
             <button
               onClick={() => setStudioTab("guardrails")}
-              className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+              className={`flex-1 py-1 text-xs font-medium rounded-md transition-all ${
                 studioTab === "guardrails"
-                  ? 'bg-indigo-600 text-white shadow'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Guardrails ({activeSession?.guardrail_alerts?.length || 0})
@@ -1117,31 +1076,30 @@ export default function App() {
 
             <button
               onClick={() => setStudioTab("fixpack")}
-              className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+              className={`flex-1 py-1 text-xs font-medium rounded-md transition-all ${
                 studioTab === "fixpack"
-                  ? 'bg-indigo-600 text-white shadow'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Agent Fix Pack
+              Fix Pack
             </button>
           </div>
 
           {/* Feature D: Subagent Council Persona Filter Pills (Shown on Cards Tab) */}
           {activeSession && studioTab === "cards" && (
-            <div className="p-2 border-b border-slate-800/80 bg-slate-950 flex items-center gap-1 overflow-x-auto text-[10px]">
-              <span className="text-slate-500 font-bold uppercase shrink-0">Council:</span>
+            <div className="p-2 border-b border-slate-800/60 bg-slate-950 flex items-center gap-1 overflow-x-auto text-[10px]">
               {[
                 { id: "ALL", label: `All (${activeSession.comments?.length || 0})` },
                 { id: "VoiceLead", label: "🎙️ VoiceLead" },
-                { id: "SecuritySentinel", label: "🛡️ SecuritySentinel" },
-                { id: "ContractGuardian", label: "📐 ContractGuardian" },
-                { id: "PerfProfiler", label: "⚡ PerfProfiler" },
+                { id: "SecuritySentinel", label: "🛡️ Security" },
+                { id: "ContractGuardian", label: "📐 Contract" },
+                { id: "PerfProfiler", label: "⚡ Perf" },
               ].map(p => (
                 <button
                   key={p.id}
                   onClick={() => setPersonaFilter(p.id)}
-                  className={`px-2 py-0.5 rounded-full shrink-0 font-medium transition-all ${
+                  className={`px-2 py-0.5 rounded-md shrink-0 font-medium transition-all ${
                     personaFilter === p.id
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
@@ -1160,9 +1118,9 @@ export default function App() {
             {!activeSession && (
               <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-slate-500 space-y-2">
                 <Bot className="w-8 h-8 text-slate-600 stroke-1" />
-                <p className="text-xs">No voice review session analyzed yet.</p>
-                <p className="text-[11px] text-slate-600">
-                  Click '🎙️ Quick-Fill Voice Preset' then 'Analyze Spoken Review' to generate review cards and agent prompts.
+                <p className="text-xs text-slate-400">No review session yet</p>
+                <p className="text-[11px] text-slate-500 max-w-xs">
+                  Speak a code review or click '🎙️ Sample Review', then click 'Analyze Spoken Review' to generate findings.
                 </p>
               </div>
             )}
@@ -1172,7 +1130,7 @@ export default function App() {
               <div className="space-y-2.5">
                 {filteredComments.length === 0 ? (
                   <div className="p-4 text-center text-xs text-slate-500">
-                    No review comments match the selected persona filter.
+                    No review comments match the selected filter.
                   </div>
                 ) : (
                   filteredComments.map((comment, idx) => {
@@ -1183,11 +1141,11 @@ export default function App() {
                       <div
                         key={comment.id || idx}
                         onClick={() => scrollToLine(targetLine)}
-                        className="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-xs space-y-1.5 shadow-sm transition-all cursor-pointer group"
+                        className="p-3 rounded-lg bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-xs space-y-1.5 shadow-sm transition-all cursor-pointer group"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${
                               comment.severity === 'Critical' ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' :
                               comment.severity === 'Warning' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
                               comment.category === 'Approval' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
@@ -1196,7 +1154,7 @@ export default function App() {
                               {comment.severity || "Suggestion"} • {comment.category}
                             </span>
                             {/* Subagent Persona Badge */}
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">
                               {comment.subagent_persona === 'SecuritySentinel' ? '🛡️ Security' :
                                comment.subagent_persona === 'ContractGuardian' ? '📐 Contract' :
                                comment.subagent_persona === 'PerfProfiler' ? '⚡ Perf' : '🎙️ VoiceLead'}
@@ -1230,16 +1188,16 @@ export default function App() {
                         {comment.suggested_patch && (
                           <div className="pt-1">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">Suggested Patch:</span>
+                              <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">Suggested Patch</span>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setPreviewPatchId(isPatchPreviewOpen ? null : comment.id);
                                 }}
-                                className="text-[10px] text-cyan-300 hover:underline flex items-center gap-1 font-semibold"
+                                className="text-[10px] text-cyan-300 hover:underline flex items-center gap-1 font-medium"
                               >
                                 <Eye className="w-3 h-3" />
-                                {isPatchPreviewOpen ? "Hide Patch" : "Preview Applied Patch"}
+                                {isPatchPreviewOpen ? "Hide" : "Preview"}
                               </button>
                             </div>
 
@@ -1261,13 +1219,13 @@ export default function App() {
             {activeSession && studioTab === "guardrails" && (
               <div className="space-y-2.5">
                 {activeSession.guardrail_alerts?.map((alert, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-rose-950/20 border border-rose-500/30 text-rose-200 text-xs space-y-1">
+                  <div key={idx} className="p-3 rounded-lg bg-rose-950/20 border border-rose-500/30 text-rose-200 text-xs space-y-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
                           {alert.rule_id}
                         </span>
-                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-900 text-slate-300 border border-slate-800">
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-800">
                           {alert.subagent_persona || "SecuritySentinel"}
                         </span>
                       </div>
@@ -1287,19 +1245,19 @@ export default function App() {
             {activeSession && studioTab === "fixpack" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    Coding Agent Fix Specification
+                  <span className="text-xs font-medium text-slate-400">
+                    Coding Agent Fix Prompt
                   </span>
                   <button
                     onClick={handleCopyFixPack}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-[11px] font-bold text-white shadow transition-all"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white shadow-sm transition-all"
                   >
                     <Copy className="w-3 h-3" />
-                    <span>Copy Fix Pack</span>
+                    <span>Copy</span>
                   </button>
                 </div>
 
-                <pre className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-200 whitespace-pre-wrap leading-relaxed max-h-[460px] overflow-y-auto">
+                <pre className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-200 whitespace-pre-wrap leading-relaxed max-h-[460px] overflow-y-auto">
                   {activeSession.agent_fix_prompt}
                 </pre>
               </div>
@@ -1445,7 +1403,7 @@ export default function App() {
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 font-mono text-[11px]"
                   />
                   <p className="text-[10px] text-slate-500 mt-1">
-                    Zero token required! Automatically fetches public repositories and pull requests for inspection.
+                    Fetches public repositories and pull requests for code review.
                   </p>
                 </div>
 
@@ -1479,11 +1437,11 @@ export default function App() {
                         github_token: "",
                       });
                       setGithubHubOpen(false);
-                      triggerToast("Switched to Instant Reviewer Workspace Mode!");
+                      triggerToast("Active in Reviewer Workspace Mode");
                     }}
                     className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 font-semibold"
                   >
-                    ⚡ Continue in Instant Reviewer Workspace
+                    Continue as Reviewer
                   </button>
 
                   <button
@@ -1736,13 +1694,13 @@ export default function App() {
                     required
                   />
                   <p className="text-[10px] text-slate-500 mt-1">
-                    Fetches unified diff directly from GitHub with 5.0s timeout and zero-fail deterministic offline fallback for hackathon judges.
+                    Fetches unified git diff directly from any public GitHub pull request.
                   </p>
                 </div>
 
                 {/* Preset URL chips */}
                 <div className="space-y-1">
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase">1-Click Sample PRs:</span>
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Sample PRs:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {[
                       "https://github.com/fastapi/fastapi/pull/9999",

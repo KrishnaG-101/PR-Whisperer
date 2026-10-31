@@ -177,42 +177,6 @@ def test_queryspeak_voice_search():
     assert "QuerySpeak identified" in result["insight_summary"]
 
 
-def test_incident_drill_and_oncall_remediation():
-    # 1. Trigger simulated user-impact failure on voice review
-    fail_payload = {
-        "spoken_transcript": "Testing incident alert triggering",
-        "simulate_failure": True,
-    }
-    fail_resp = client.post("/api/v1/prs/PR-101/voice-analyze", json=fail_payload)
-    assert fail_resp.status_code == 500
-    assert "Simulated user-impact error" in fail_resp.json()["detail"]
-
-    # 2. Check telemetry summary reflects active incident and error metric
-    telem_resp = client.get("/api/v1/telemetry/summary")
-    assert telem_resp.status_code == 200
-    telem_data = telem_resp.json()
-    assert len(telem_data["active_incidents"]) >= 1
-
-    # 3. Trigger autonomous On-Call Responder Agent
-    drill_payload = {
-        "alert_type": "VOICE_ANALYZE_FAILURE",
-        "pr_id": "PR-101",
-        "simulated_error": "RateLimitExceeded: Gemini API quota exceeded on voice parsing.",
-    }
-    remediate_resp = client.post("/api/v1/incidents/simulate-and-respond", json=drill_payload)
-    assert remediate_resp.status_code == 200
-    remedy = remediate_resp.json()
-
-    assert remedy["status"] == "RESOLVED_BY_ONCALL_AGENT"
-    assert "Root Cause Identified" in remedy["root_cause_analysis"]
-    assert "remediation_diff" in remedy
-    assert remedy["verified_by_tests"] is True
-
-    # 4. Check that active incidents are cleared in telemetry summary
-    telem_after = client.get("/api/v1/telemetry/summary").json()
-    assert len(telem_after["active_incidents"]) == 0
-
-
 def test_prometheus_metrics_endpoint():
     response = client.get("/metrics")
     assert response.status_code == 200
