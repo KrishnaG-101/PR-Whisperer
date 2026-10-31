@@ -51,6 +51,7 @@ SECRET_PATTERNS = [
     (re.compile(r"Bearer\s+[A-Za-z0-9_\-\.]{20,}"), "Bearer [REDACTED_SECRET]"),
     (re.compile(r"ghp_[0-9a-zA-Z]{30,}"), "[REDACTED_SECRET]"),
     (re.compile(r"AKIA[0-9A-Z]{16}"), "[REDACTED_SECRET]"),
+    (re.compile(r"AIzaSy[0-9a-zA-Z_\-]{33}"), "[REDACTED_SECRET]"),
     (re.compile(r"password['\"]?\s*[:=]\s*['\"][^'\"]+['\"]", re.IGNORECASE), "password='[REDACTED_SECRET]'"),
 ]
 

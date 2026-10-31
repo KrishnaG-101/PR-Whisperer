@@ -47,6 +47,7 @@ def test_deterministic_guardrails_secret():
     secret_alert = next(a for a in alerts if a["rule_id"] == RULE_SEC_01)
     assert secret_alert["severity"] == "Critical"
     assert "sk_live_" in secret_alert["description"] or "secret key" in secret_alert["title"].lower()
+    assert secret_alert.get("subagent_persona") == "SecuritySentinel"
 
 
 def test_openapi_contract_drift():
@@ -57,6 +58,7 @@ def test_openapi_contract_drift():
     assert drift_alert is not None
     assert drift_alert["severity"] == "Critical"
     assert "currency" in drift_alert["description"].lower() or "schema" in drift_alert["description"].lower()
+    assert drift_alert.get("subagent_persona") == "ContractGuardian"
 
 
 def test_secret_redaction_telemetry():
@@ -65,6 +67,14 @@ def test_secret_redaction_telemetry():
     assert "sk_live_DEMO_MOCK_STRIPE_KEY_TESTING_ONLY" not in redacted
     assert "[REDACTED_SECRET]" in redacted
     assert "Bearer [REDACTED_SECRET]" in redacted or "[REDACTED_SECRET]" in redacted
+
+
+def test_gemini_api_key_redaction():
+    # BUG-03 test
+    raw_log = "Failed to initialize Gemini with API key AIzaSyD9Z8x7W6v5U4t3S2r1Q0p9O8n7M6l5K4j"
+    redacted = sanitize_telemetry_payload(raw_log)
+    assert "AIzaSy" not in redacted
+    assert "[REDACTED_SECRET]" in redacted
 
 
 def test_spoken_transcript_parsing():
@@ -84,18 +94,48 @@ def test_spoken_transcript_parsing():
     secret_comment = next(c for c in comments if "secret" in c["spoken_excerpt"].lower())
     assert secret_comment["severity"] == "Critical"
     assert secret_comment["line_start"] == 14
+    assert secret_comment.get("line_number") == 14
+    assert secret_comment.get("subagent_persona") == "SecuritySentinel"
     assert "diff" in secret_comment["suggested_patch"] or "stripe.api_key" in secret_comment["suggested_patch"]
+
+
+def test_spoken_approval_sentiment_and_score():
+    # BUG-04 test
+    transcript = "In payments.py, this implementation looks good and is clean and approved for release."
+    changed_files = ["backend/routers/payments.py"]
+    comments = parse_spoken_critique_into_comments(transcript, changed_files, PR_101_DIFF)
+
+    assert len(comments) == 1
+    assert comments[0]["category"] == "Approval"
+    assert comments[0]["subagent_persona"] == "VoiceLead"
+    # Verification that approval incurs 0 deduction
+    score = calculate_readiness_score(comments, [])
+    assert score == 100
+
+
+def test_line_number_clamping():
+    # BUG-05 test
+    short_diff = "diff --git a/test.py b/test.py\n+line 1\n+line 2"
+    transcript = "In test.py line 9999 has a performance bug."
+    comments = parse_spoken_critique_into_comments(transcript, ["test.py"], short_diff)
+
+    assert len(comments) == 1
+    # Clamped to upper bound of diff lines (minimum 50 bounds guard)
+    assert comments[0]["line_start"] <= 50
+    assert comments[0]["line_number"] <= 50
 
 
 def test_readiness_score_calculation():
     critical_comment = [{"file_path": "a.py", "line_start": 10, "severity": "Critical"}]
     warning_comment = [{"file_path": "b.py", "line_start": 20, "severity": "Warning"}]
     suggestion_comment = [{"file_path": "c.py", "line_start": 30, "severity": "Suggestion"}]
+    approval_comment = [{"file_path": "d.py", "line_start": 40, "severity": "Suggestion", "category": "Approval"}]
 
     assert calculate_readiness_score([], []) == 100
     assert calculate_readiness_score(critical_comment, []) == 75
     assert calculate_readiness_score(critical_comment + warning_comment, []) == 65
     assert calculate_readiness_score(critical_comment + warning_comment + suggestion_comment, []) == 62
+    assert calculate_readiness_score(critical_comment + warning_comment + suggestion_comment + approval_comment, []) == 62
 
 
 def test_agent_fix_prompt_generation():

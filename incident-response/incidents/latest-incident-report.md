@@ -1,24 +1,24 @@
-# Post-Mortem Incident Report: INC-B9396BA6
+# Post-Mortem Incident Report: INC-C66F1F9C
 **Resolved by Autonomous On-Call Responder Agent (`role:oncall`)**
 
 ---
 
 ### Incident Summary
-- **Incident ID**: `INC-B9396BA6`
-- **Correlated Trace ID**: `02db4fb78ef5404dbe685e5c6184127c`
+- **Incident ID**: `INC-C66F1F9C`
+- **Correlated Trace ID**: `f95206e847fe4d2a9742d38f0075bb03`
 - **Trigger Metric**: `voice_analyze_error_rate > 0`
 - **Resolution Status**: `RESOLVED_BY_ONCALL_AGENT`
-- **Timestamp**: `2026-10-28T07:54:23.179678+00:00`
+- **Timestamp**: `2026-10-31T06:56:58.174309+00:00`
 
 ---
 
 ### Evidence Packet
 ```json
 {
-  "incident_id": "INC-B9396BA6",
-  "trace_id": "02db4fb78ef5404dbe685e5c6184127c",
+  "incident_id": "INC-C66F1F9C",
+  "trace_id": "f95206e847fe4d2a9742d38f0075bb03",
   "alert_name": "HighVoiceAnalyzeFailureRate",
-  "timestamp": "2026-10-28T07:54:23.179664+00:00",
+  "timestamp": "2026-10-31T06:56:58.174292+00:00",
   "error_signature": "RateLimitExceeded: Gemini API quota exceeded on voice parsing.",
   "policy_verified": "incident-response/autonomy-policy.yaml"
 }

@@ -17,6 +17,21 @@ servers:
     description: Local Development & Docker Compose Gateway
 
 paths:
+  /metrics:
+    get:
+      summary: Prometheus Scrape Endpoint
+      description: Returns Prometheus metrics including latency and error counters.
+      operationId: getMetrics
+      tags:
+        - System
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
   /api/v1/health:
     get:
       summary: System Health & Readiness Check
@@ -104,6 +119,34 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /api/v1/prs/import-github:
+    post:
+      summary: Import Live Public GitHub Pull Request
+      description: >
+        Fetches a public GitHub pull request diff with strict 5.0s timeout and
+        deterministic fallback for offline evaluation.
+      operationId: importGitHubPR
+      tags:
+        - Pull Requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitHubImportRequest'
+      responses:
+        '201':
+          description: Pull request successfully imported.
+          headers:
+            X-Trace-ID:
+              $ref: '#/components/headers/X-Trace-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequestDetail'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /api/v1/prs/{pr_id}:
     get:
       summary: Get Pull Request Details
@@ -131,6 +174,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PullRequestDetail'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/prs/{pr_id}/readiness-certificate:
+    get:
+      summary: Export PR Release Readiness Certificate
+      description: Generates an exportable, audit-grade Release Readiness Certificate (.md) with Subagent Council sign-offs.
+      operationId: getPRReadinessCertificate
+      tags:
+        - Pull Requests
+      parameters:
+        - name: pr_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "PR-101"
+      responses:
+        '200':
+          description: Certificate generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessCertificateResponse'
         '404':
           $ref: '#/components/responses/NotFoundError'
 
@@ -286,6 +353,31 @@ components:
         example: "4bf92f3577b34da6a3ce929d0e0e4736"
 
   schemas:
+    GitHubImportRequest:
+      type: object
+      required:
+        - github_url
+      properties:
+        github_url:
+          type: string
+          example: "https://github.com/owner/repo/pull/123"
+
+    ReadinessCertificateResponse:
+      type: object
+      required:
+        - pr_id
+        - filename
+        - certificate_markdown
+      properties:
+        pr_id:
+          type: string
+          example: "PR-101"
+        filename:
+          type: string
+          example: "PR-101_release_readiness_certificate.md"
+        certificate_markdown:
+          type: string
+
     HealthResponse:
       type: object
       required:

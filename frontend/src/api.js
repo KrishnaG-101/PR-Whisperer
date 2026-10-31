@@ -36,6 +36,25 @@ export async function createCustomPR(payload) {
   return res.json();
 }
 
+export async function importGitHubPR(githubUrl) {
+  const res = await fetch(`${BASE_URL}/api/v1/prs/import-github`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ github_url: githubUrl }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to import GitHub PR: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchReadinessCertificate(prId) {
+  const res = await fetch(`${BASE_URL}/api/v1/prs/${encodeURIComponent(prId)}/readiness-certificate`);
+  if (!res.ok) throw new Error(`Failed to fetch readiness certificate: ${res.status}`);
+  return res.json();
+}
+
 export async function analyzeVoiceReview(prId, payload) {
   const res = await fetch(`${BASE_URL}/api/v1/prs/${encodeURIComponent(prId)}/voice-analyze`, {
     method: "POST",

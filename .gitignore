@@ -73,3 +73,15 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Scratch & Local Development Artifacts
+scratch/
+*.tmp
+*.bak
+.system_generated/
+
+# Private Demo Scripts, Audits & Submission Guides (Local Only)
+docs/hackathon-and-rubric-guide.md
+docs/qa-audit-and-feature-roadmap.md
+
+

@@ -41,6 +41,16 @@ class PullRequestCreate(BaseModel):
     diff_text: str = Field(..., description="Unified git diff text")
 
 
+class GitHubImportRequest(BaseModel):
+    github_url: str = Field(..., description="Public GitHub PR URL, e.g. https://github.com/owner/repo/pull/123")
+
+
+class ReadinessCertificateResponse(BaseModel):
+    pr_id: str
+    filename: str
+    certificate_markdown: str
+
+
 class ReviewCommentItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -48,11 +58,13 @@ class ReviewCommentItem(BaseModel):
     file_path: str
     line_start: int
     line_end: int
+    line_number: Optional[int] = None
     category: str
     severity: str
     spoken_excerpt: str
     polished_comment: str
     suggested_patch: str
+    subagent_persona: Optional[str] = "VoiceLead"
     created_at: datetime = Field(default_factory=get_utc_now)
 
 
@@ -66,6 +78,7 @@ class GuardrailAlert(BaseModel):
     file_path: str
     line_number: int
     description: str
+    subagent_persona: Optional[str] = "SecuritySentinel"
     created_at: datetime = Field(default_factory=get_utc_now)
 
 
@@ -82,6 +95,11 @@ class VoiceReviewSession(BaseModel):
     agent_fix_prompt: str
     comments: List[ReviewCommentItem] = Field(default_factory=list)
     guardrail_alerts: List[GuardrailAlert] = Field(default_factory=list)
+    word_count: int = Field(default=0)
+    estimated_speaking_seconds: float = Field(default=0.0)
+    estimated_typing_seconds_saved: float = Field(default=0.0)
+    speedup_multiplier: float = Field(default=1.0)
+    review_verdict: str = Field(default="COMMENTED")
     created_at: datetime = Field(default_factory=get_utc_now)
 
 
@@ -96,6 +114,7 @@ class VoiceAnalyzeRequest(BaseModel):
     spoken_transcript: str
     reviewer_name: Optional[str] = "Wispr Reviewer"
     simulate_failure: Optional[bool] = False
+    append_to_latest: Optional[bool] = False
 
 
 class QuerySpeakRequest(BaseModel):

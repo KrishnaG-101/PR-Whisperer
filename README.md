@@ -148,7 +148,7 @@ PR-Whisperer adheres to a modular documentation architecture. Reviewers and agen
 | [`openapi.yaml`](./openapi.yaml) | **API Single Source of Truth**: Full OpenAPI 3.1.0 contract governing all 8 endpoints and schemas. |
 | [`docs/agent-team.md`](./docs/agent-team.md) | **Rubric Criterion 3 (2 pts)**: 4 specialized agent roles (`role:pm`, `role:swe`, `role:qa`, `role:oncall`) and sequence diagram. |
 | [`docs/process.md`](./docs/process.md) | **Methodology**: Spec-Driven Loop engineering, Wispr Flow "No Hands" workflow, and task state machine. |
-| [`docs/backlog-tracker.md`](./docs/backlog-tracker.md) | **Rubric Criterion 2 (2 pts)**: In-repo task tracker (`TASK-01` to `TASK-10`) with auditable agent execution logs. |
+| [`docs/backlog-tracker.md`](./docs/backlog-tracker.md) | **Rubric Criterion 2 (2 pts)**: In-repo task tracker (`TASK-01` to `TASK-12`) with auditable agent execution logs. |
 | [`docs/architecture.md`](./docs/architecture.md) | **System Architecture**: Detailed component layout, SQLAlchemy ER schema, and MCP server specification. |
 | [`docs/observability-and-oncall.md`](./docs/observability-and-oncall.md) | **Rubric Criteria 9 & 10 (4 pts)**: OpenTelemetry pipeline, secret scrubber, Prometheus metrics, and autonomous on-call agent. |
 | [`docs/testing-and-cicd.md`](./docs/testing-and-cicd.md) | **Rubric Criteria 6, 7 & 8 (8 pts)**: Pytest pyramid, GitHub Actions CI/CD pipeline, and Docker Compose topology. |

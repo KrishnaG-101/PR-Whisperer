@@ -92,6 +92,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 14,
                     "description": "Detected hardcoded live secret key matching pattern 'sk_live_...'. Move credentials to environment variables.",
+                    "subagent_persona": "SecuritySentinel",
                     "created_at": get_iso_now(),
                 })
 
@@ -106,6 +107,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 38,
                     "description": "Unescaped raw SQL string formatting opens a direct SQL injection vulnerability. Parameterize query inputs.",
+                    "subagent_persona": "SecuritySentinel",
                     "created_at": get_iso_now(),
                 })
 
@@ -119,6 +121,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 27,
                     "description": "Plaintext Authorization header or token logged in runtime statement. Redact credentials before logging.",
+                    "subagent_persona": "SecuritySentinel",
                     "created_at": get_iso_now(),
                 })
 
@@ -133,6 +136,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 52,
                     "description": "Bare except clause swallowing exceptions silently hides expired tokens and authentication failures.",
+                    "subagent_persona": "SecuritySentinel",
                     "created_at": get_iso_now(),
                 })
 
@@ -146,6 +150,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                     "file_path": current_file,
                     "line_number": current_line if current_line > 1 else 44,
                     "description": "Database query executed within iterative loop causes severe N+1 latency degradation. Batch query using SQL IN.",
+                    "subagent_persona": "PerfProfiler",
                     "created_at": get_iso_now(),
                 })
 
@@ -160,6 +165,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
                         "file_path": current_file if "schema" in current_file else "backend/schemas/payment.py",
                         "line_number": 5,
                         "description": "Removed field 'currency' from request schema without updating openapi.yaml or deprecation window.",
+                        "subagent_persona": "ContractGuardian",
                         "created_at": get_iso_now(),
                     })
 
@@ -177,6 +183,7 @@ def scan_deterministic_guardrails(diff_text: str, changed_files: List[str]) -> L
             "file_path": "backend/schemas/payment.py",
             "line_number": 5,
             "description": "Detected schema field deletion in PaymentChargeRequest causing OpenAPI v1 specification divergence.",
+            "subagent_persona": "ContractGuardian",
             "created_at": get_iso_now(),
         })
 
@@ -191,37 +198,75 @@ def parse_spoken_critique_into_comments(
     """Segments natural spoken transcript and builds line-pinned review cards with patches."""
     comments = []
     
+    # Calculate bounds from diff lines to avoid out-of-range line pinning (BUG-05)
+    diff_line_count = max(len(diff_text.splitlines()) if diff_text else 50, 50)
+
     # Split spoken critique into thoughts using transitions and punctuation
     raw_sentences = re.split(r"(?<=[.!?])\s+|\s+(?=Also\b|Finally\b|Down on\b|Looking at\b|In\s+[a-zA-Z0-9_/.]+\.py)", spoken_transcript)
     sentences = [s.strip() for s in raw_sentences if len(s.strip()) > 10]
 
     for sentence in sentences:
         target_file = match_file_from_speech(sentence, changed_files)
-        line_num = extract_line_number(sentence, default=1)
+        raw_line_num = extract_line_number(sentence, default=1)
+        # Clamp extracted line number to diff line bounds
+        line_num = max(1, min(raw_line_num, diff_line_count))
         sentence_lower = sentence.lower()
 
-        # Categorize & determine severity
-        if "secret" in sentence_lower or "sk_live" in sentence_lower or "sql" in sentence_lower or "injection" in sentence_lower or "bearer" in sentence_lower or "auth" in sentence_lower and "log" in sentence_lower:
+        # Approval / Praise sentiment detection (BUG-04)
+        is_approval = any(
+            phrase in sentence_lower
+            for phrase in [
+                "looks good",
+                "lgtm",
+                "ready to ship",
+                "clean implementation",
+                "approved",
+                "looks great",
+                "great job",
+                "well done",
+                "ship it",
+                "well structured",
+            ]
+        )
+
+        # Categorize & determine severity & subagent persona
+        if is_approval:
+            category = "Approval"
+            severity = "Suggestion"
+            subagent_persona = "VoiceLead"
+        elif "secret" in sentence_lower or "sk_live" in sentence_lower or "sql" in sentence_lower or "injection" in sentence_lower or "bearer" in sentence_lower or ("auth" in sentence_lower and "log" in sentence_lower):
             category = "Security"
             severity = "Critical"
+            subagent_persona = "SecuritySentinel"
         elif "contract" in sentence_lower or "openapi" in sentence_lower or "schema" in sentence_lower or "drift" in sentence_lower:
             category = "Contract Drift"
             severity = "Critical"
+            subagent_persona = "ContractGuardian"
         elif "n+1" in sentence_lower or "loop" in sentence_lower or "performance" in sentence_lower or "bottleneck" in sentence_lower:
             category = "Performance"
             severity = "Warning"
+            subagent_persona = "PerfProfiler"
         elif "unit test" in sentence_lower or "test" in sentence_lower:
             category = "Test Gap"
             severity = "Suggestion"
+            subagent_persona = "VoiceLead"
         elif "exception" in sentence_lower or "pass" in sentence_lower or "rate limit" in sentence_lower or "pagination" in sentence_lower:
             category = "Bug"
             severity = "Warning"
+            subagent_persona = "VoiceLead"
         else:
             category = "Bug"
             severity = "Suggestion"
+            subagent_persona = "VoiceLead"
 
         # Generate constructive comment
-        if "secret" in sentence_lower:
+        if is_approval:
+            polished = (
+                f"**Approval Verification**: Spoken review verified: '{sentence}'. "
+                "Architecture, styling, and design conform to expectations and are approved for merge."
+            )
+            patch = f"# Approved changes verified in {target_file}:{line_num}"
+        elif "secret" in sentence_lower:
             line_num = 14 if line_num == 1 else line_num
             polished = (
                 "**Critical Security Flaw**: Hardcoded live secret key detected in source code. "
@@ -345,11 +390,13 @@ def parse_spoken_critique_into_comments(
             "file_path": target_file,
             "line_start": line_num,
             "line_end": line_num + 3,
+            "line_number": line_num,
             "category": category,
             "severity": severity,
             "spoken_excerpt": sentence,
             "polished_comment": polished,
             "suggested_patch": patch,
+            "subagent_persona": subagent_persona,
             "created_at": get_iso_now(),
         })
 
@@ -357,12 +404,16 @@ def parse_spoken_critique_into_comments(
 
 
 def calculate_readiness_score(comments: List[Dict[str, Any]], alerts: List[Dict[str, Any]]) -> int:
-    """Calculates deterministic 0-100 score: Base 100, Critical -25, Warning -10, Suggestion -3."""
+    """Calculates deterministic 0-100 score: Base 100, Critical -25, Warning -10, Suggestion -3. Approval comments incur 0 penalty."""
     score = 100
     seen_violations = set()
 
     # Deduct from comments
     for c in comments:
+        # Praise/Approval comments incur 0 score penalty (BUG-04)
+        if c.get("category") == "Approval" or c.get("severity") == "Approval":
+            continue
+
         key = f"{c.get('file_path')}:{c.get('line_start')}:{c.get('severity')}"
         if key not in seen_violations:
             seen_violations.add(key)
@@ -409,11 +460,13 @@ def generate_agent_fix_prompt(
         "## Priority Action Items",
     ]
 
-    # Combine unique findings
+    # Combine unique findings (skip pure approvals from fix list)
     all_findings = []
     for c in comments:
+        if c.get("category") == "Approval":
+            continue
         all_findings.append({
-            "source": "Voice Reviewer",
+            "source": f"Voice Reviewer ({c.get('subagent_persona', 'VoiceLead')})",
             "file": c["file_path"],
             "line": c["line_start"],
             "severity": c["severity"],
@@ -425,7 +478,7 @@ def generate_agent_fix_prompt(
     for a in alerts:
         if not any(f["file"] == a["file_path"] and abs(f["line"] - a["line_number"]) <= 2 for f in all_findings):
             all_findings.append({
-                "source": f"Deterministic Guardrail ({a['rule_id']})",
+                "source": f"Deterministic Guardrail ({a['rule_id']} - {a.get('subagent_persona', 'SecuritySentinel')})",
                 "file": a["file_path"],
                 "line": a["line_number"],
                 "severity": a["severity"],
@@ -434,15 +487,18 @@ def generate_agent_fix_prompt(
                 "patch": None,
             })
 
-    for i, f in enumerate(all_findings, 1):
-        lines.append(f"### {i}. [{f['severity'].upper()}] {f['category']} in `{f['file']}` (Line {f['line']})")
-        lines.append(f"- **Origin**: {f['source']}")
-        lines.append(f"- **Guidance**: {f['description']}")
-        if f.get("patch"):
-            lines.append("```diff")
-            lines.append(f["patch"])
-            lines.append("```")
-        lines.append("")
+    if not all_findings:
+        lines.append("No blocker or bug remediations required. All voice critiques were approvals and guardrails passed green.")
+    else:
+        for i, f in enumerate(all_findings, 1):
+            lines.append(f"### {i}. [{f['severity'].upper()}] {f['category']} in `{f['file']}` (Line {f['line']})")
+            lines.append(f"- **Origin**: {f['source']}")
+            lines.append(f"- **Guidance**: {f['description']}")
+            if f.get("patch"):
+                lines.append("```diff")
+                lines.append(f["patch"])
+                lines.append("```")
+            lines.append("")
 
     lines.extend([
         "## Verification & Guardrail Instructions",
@@ -466,7 +522,8 @@ def generate_summary_markdown(
     """Generates an executive summary markdown for the PR review."""
     crit_count = sum(1 for c in comments if c["severity"] == "Critical") + sum(1 for a in alerts if a["severity"] == "Critical")
     warn_count = sum(1 for c in comments if c["severity"] == "Warning") + sum(1 for a in alerts if a["severity"] == "Warning")
-    sugg_count = sum(1 for c in comments if c["severity"] == "Suggestion") + sum(1 for a in alerts if a["severity"] == "Suggestion")
+    sugg_count = sum(1 for c in comments if c["severity"] == "Suggestion" and c.get("category") != "Approval") + sum(1 for a in alerts if a["severity"] == "Suggestion")
+    appr_count = sum(1 for c in comments if c.get("category") == "Approval")
 
     status_badge = "CRITICAL BLOCKERS DETECTED" if score < 60 else ("NEEDS WORK" if score < 85 else "READY TO MERGE")
 
@@ -474,7 +531,8 @@ def generate_summary_markdown(
         f"### Voice Review Analysis Summary: **{status_badge}** (Score: {score}/100)\n\n"
         f"- **Critical Issues**: {crit_count} (Requires immediate remediation before merge)\n"
         f"- **Warnings**: {warn_count} (Performance, bug risk, or exception handling)\n"
-        f"- **Suggestions / Test Gaps**: {sugg_count}\n\n"
+        f"- **Suggestions / Test Gaps**: {sugg_count}\n"
+        f"- **Approvals / Praise**: {appr_count}\n\n"
         f"Dictated review comments have been pinned to exact code lines with proposed replacement diffs. "
         f"Use the **1-Click Coding Agent Fix Prompt** to automatically apply corrections with Claude Code, Cursor, or Antigravity."
     )
@@ -490,7 +548,7 @@ async def analyze_voice_review(
     reviewer_name: str = "Wispr Reviewer",
     trace_id: str = "",
 ) -> Dict[str, Any]:
-    """Orchestrates deterministic scanner and transcript parser to produce a complete VoiceReviewSession."""
+    """Orchestrates deterministic scanner, transcript parser, and voice velocity metrics."""
     changed_files = extract_diff_files(diff_text)
     if not changed_files:
         changed_files = ["app/main.py"]
@@ -517,6 +575,24 @@ async def analyze_voice_review(
     # 5. Generate Summary Markdown
     summary_md = generate_summary_markdown(comments, guardrail_alerts, readiness_score)
 
+    # 6. Calculate Voice Velocity & Ergonomics Metrics (Feature A)
+    words = [w for w in spoken_transcript.split() if w.strip()]
+    word_count = len(words)
+    # Average speaking speed: 150 words/min -> 2.5 words/sec
+    speaking_seconds = round(word_count / 2.5, 1) if word_count > 0 else 0.0
+    # Average developer typing speed with formatting: ~35 words/min -> word_count / (35/60)
+    typing_seconds_saved = round(word_count * 1.71, 1) if word_count > 0 else 0.0
+    speedup_multiplier = 4.3 if word_count > 0 else 1.0
+
+    # Review Verdict determination
+    has_critical = any(c.get("severity") == "Critical" for c in comments) or any(a.get("severity") == "Critical" for a in guardrail_alerts)
+    if has_critical or readiness_score < 70:
+        verdict = "CHANGES_REQUESTED"
+    elif readiness_score >= 85:
+        verdict = "APPROVED"
+    else:
+        verdict = "COMMENTED"
+
     session_id = f"VRS-{uuid.uuid4().hex[:8]}"
 
     return {
@@ -530,5 +606,10 @@ async def analyze_voice_review(
         "agent_fix_prompt": fix_prompt,
         "comments": comments,
         "guardrail_alerts": guardrail_alerts,
+        "word_count": word_count,
+        "estimated_speaking_seconds": speaking_seconds,
+        "estimated_typing_seconds_saved": typing_seconds_saved,
+        "speedup_multiplier": speedup_multiplier,
+        "review_verdict": verdict,
         "created_at": get_iso_now(),
     }
